@@ -53,8 +53,8 @@ class SpringManifoldIntegrationTest {
         // 2. Run the job orchestrator on the temporary directory
         jobOrchestrator.runJob(repositoryConnector, outputConnector, tempDir.toString());
 
-        // Give some time for the persistence (if any async logic involved)
-        Thread.sleep(1000);
+        // Give some time for the async Kafka consumer to process and persist
+        Thread.sleep(3000);
 
         // 3. Verify the content in the Vector Store using a similarity search
         log.info("Performing similarity search for 'document orchestration'...");

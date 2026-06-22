@@ -1,9 +1,12 @@
 package org.apache.manifoldcf.runtime.orchestrator;
 
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.apache.manifoldcf.core.connector.RepositoryConnector;
 import org.apache.manifoldcf.core.connector.OutputConnector;
 import org.apache.manifoldcf.core.result.ScanResult;
+import org.apache.manifoldcf.runtime.config.KafkaConfig;
+import org.apache.manifoldcf.runtime.messaging.IngestionMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -15,31 +18,51 @@ import java.util.ArrayList;
 public class JobOrchestrator {
     
     private static final Logger log = LoggerFactory.getLogger(JobOrchestrator.class);
+    
+    private final KafkaTemplate<String, IngestionMessage> kafkaTemplate;
+
+    public JobOrchestrator(KafkaTemplate<String, IngestionMessage> kafkaTemplate) {
+        this.kafkaTemplate = kafkaTemplate;
+    }
 
     public void runJob(RepositoryConnector repositoryConnector, OutputConnector outputConnector, String path) {
         log.info("Starting job for path: {}", path);
         
-        // Java 25: StructuredTaskScope.open() defaults to "shutdown on failure" behavior
         try (var scope = StructuredTaskScope.open()) {
             
             StructuredTaskScope.Subtask<List<ScanResult>> scanTask = scope.fork(() -> {
                 List<ScanResult> results = new ArrayList<>();
                 repositoryConnector.scan(path)
-                    .flatMap(doc -> outputConnector.send(doc)
-                        .thenReturn((ScanResult) new ScanResult.Success(doc.id(), "1.0"))
-                        .onErrorResume(e -> reactor.core.publisher.Mono.just(new ScanResult.Failure(doc.id(), e))))
+                    .flatMap(doc -> {
+                        try {
+                            IngestionMessage msg = new IngestionMessage(
+                                doc.id(),
+                                doc.uri(),
+                                doc.metadata(),
+                                doc.acl(),
+                                doc.lastModified().toString()
+                            );
+                            
+                            // Publish document metadata to Kafka topic
+                            kafkaTemplate.send(KafkaConfig.TOPIC_NAME, doc.id(), msg);
+                            log.info("Published document reference to Kafka: {}", doc.id());
+                            
+                            return reactor.core.publisher.Mono.just((ScanResult) new ScanResult.Success(doc.id(), "1.0"));
+                        } catch (Exception e) {
+                            return reactor.core.publisher.Mono.just(new ScanResult.Failure(doc.id(), e));
+                        }
+                    })
                     .doOnNext(results::add)
                     .blockLast(); 
                 return results;
             });
             
-            // Java 25: join() throws FailedException if a subtask fails
             scope.join();
             
             List<ScanResult> scanResults = scanTask.get();
             scanResults.forEach(r -> log.info(r.summarize()));
             
-            log.info("Job completed successfully.");
+            log.info("Job scanning phase completed. Documents published to Kafka.");
             
         } catch (StructuredTaskScope.FailedException e) {
             log.error("Job execution failed due to subtask failure: ", e.getCause());
