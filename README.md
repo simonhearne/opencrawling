@@ -15,7 +15,7 @@
 **OpenCrawling** is an enterprise data integration and ingestion platform modeled after Apache ManifoldCF. It leverages modern Java 25 features (such as Structured Concurrency and Virtual Threads), Spring Boot, and vector search infrastructure to orchestrate data flows from various repository connectors to vector search outputs.
 
 <p align="center">
-  <img src="images/logo.png" alt="OpenCrawling Logo" width="200" />
+  <img src="https://github.com/opencrawling/.github/raw/main/profile/images/logo.png" alt="OpenCrawling Logo" width="200" />
 </p>
 
 ---
