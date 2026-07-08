@@ -98,7 +98,8 @@ docker compose up -d
 * **Apache Kafka (Port 9092)**: KRaft-mode broker for decoupled, event-driven document processing.
 
 #### 2. Pull the Embedding Model (Ollama)
-The platform is configured to use the `mxbai-embed-large` model for embeddings. You must pull it once:
+The platform is configured to use the `mxbai-embed-large` model for embeddings. 
+Currently the model should be pulled automagically but if you have issues, you have to pull it once by yourself:
 ```bash
 docker exec -it ollama ollama pull mxbai-embed-large
 ```
