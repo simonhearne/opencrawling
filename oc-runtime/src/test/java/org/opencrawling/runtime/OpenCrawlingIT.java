@@ -25,9 +25,9 @@ import static org.assertj.core.api.Assertions.assertThat;
     "spring.kafka.consumer.group-id=test-group-${random.uuid}"
 })
 @ActiveProfiles("test")
-class OpenCrawlingIntegrationTest {
+class OpenCrawlingIT {
 
-    private static final Logger log = LoggerFactory.getLogger(OpenCrawlingIntegrationTest.class);
+    private static final Logger log = LoggerFactory.getLogger(OpenCrawlingIT.class);
 
     @Autowired
     private JobOrchestrator jobOrchestrator;

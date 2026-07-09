@@ -17,7 +17,7 @@
     <packaging>pom</packaging>
 
     <name>OpenCrawling</name>
-    <description>OpenCrawling: Modernized Apache ManifoldCF using Java 25 and Spring Boot 4.0.6</description>
+    <description>OpenCrawling: Modern Crawler using Java 25 and Spring Boot 4.0.6</description>
 
     <licenses>
         <license>
@@ -66,7 +66,7 @@
         <maven-compiler-plugin.version>3.15.0</maven-compiler-plugin.version>
         <maven-surefire-plugin.version>3.5.5</maven-surefire-plugin.version>
         <maven-failsafe-plugin.version>3.5.5</maven-failsafe-plugin.version>
-
+        <docker-maven-plugin.version>0.48.1</docker-maven-plugin.version>
     </properties>
 
     <dependencyManagement>
@@ -116,6 +116,11 @@
                         <argLine>--enable-preview
                             --enable-native-access=ALL-UNNAMED</argLine>
                     </configuration>
+                </plugin>
+                <plugin>
+                    <groupId>io.fabric8</groupId>
+                    <artifactId>docker-maven-plugin</artifactId>
+                    <version>${docker-maven-plugin.version}</version>
                 </plugin>
             </plugins>
         </pluginManagement>
