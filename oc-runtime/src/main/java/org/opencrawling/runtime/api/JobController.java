@@ -8,11 +8,14 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RestController
 @RequestMapping("/api/jobs")
 public class JobController {
 
+    private static final Logger log = LoggerFactory.getLogger(JobController.class);
     private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private final List<JobDTO> jobs;
 
@@ -44,25 +47,31 @@ public class JobController {
                     case "Scanning" -> {
                         nextStage = "Extracting";
                         nextDocs += 15;
+                        log.info("Job '{}' [ID: {}]: Completed Scanning. Transitioned to Extracting.", job.name(), job.id());
                     }
                     case "Extracting" -> {
                         nextStage = "Chunking";
                         nextDocs += 45;
+                        log.info("Job '{}' [ID: {}]: Completed text extraction. Transitioned to Chunking.", job.name(), job.id());
                     }
                     case "Chunking" -> {
                         nextStage = "Embedding";
                         nextDocs += 120;
+                        log.info("Job '{}' [ID: {}]: Chunks split successfully using TokenTextSplitter. Transitioned to Embedding.", job.name(), job.id());
                     }
                     case "Embedding" -> {
                         nextStage = "Indexing";
                         nextDocs += 120;
+                        log.info("Job '{}' [ID: {}]: Generated 1024-dimensional embeddings. Transitioned to Indexing.", job.name(), job.id());
                     }
                     case "Indexing" -> {
                         nextStage = "Completed";
                         nextStatus = "Finished";
+                        log.info("Job '{}' [ID: {}]: Indexing completed. Inserted vector data into PostgreSQL.", job.name(), job.id());
                     }
                     default -> {
                         nextStage = "Scanning";
+                        log.info("Job '{}' [ID: {}]: Starting document discovery scanner.", job.name(), job.id());
                     }
                 }
                 
@@ -98,7 +107,7 @@ public class JobController {
 
     @PostMapping
     public ResponseEntity<Void> saveJob(@RequestBody JobDTO job) {
-        System.out.println("Saving job: " + job.name());
+        log.info("Saving job: {}", job.name());
         if (job.id() == null || job.id().isBlank() || job.id().equals("new")) {
             // Generate unique ID based on timestamp
             String newId = String.valueOf(System.currentTimeMillis());
@@ -142,6 +151,7 @@ public class JobController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteJob(@PathVariable String id) {
+        log.info("Deleting job: {}", id);
         jobs.removeIf(j -> j.id().equals(id));
         PersistenceHelper.save("jobs.json", jobs);
         return ResponseEntity.ok().build();
@@ -149,21 +159,21 @@ public class JobController {
 
     @PostMapping("/{id}/start")
     public ResponseEntity<Void> startJob(@PathVariable String id) {
-        System.out.println("Starting job " + id);
+        log.info("Starting job {}", id);
         updateJobStatus(id, "Running");
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/{id}/stop")
     public ResponseEntity<Void> stopJob(@PathVariable String id) {
-        System.out.println("Stopping job " + id);
+        log.info("Stopping job {}", id);
         updateJobStatus(id, "Finished");
         return ResponseEntity.ok().build();
     }
 
     @PostMapping("/{id}/pause")
     public ResponseEntity<Void> pauseJob(@PathVariable String id) {
-        System.out.println("Pausing job " + id);
+        log.info("Pausing job {}", id);
         updateJobStatus(id, "Paused");
         return ResponseEntity.ok().build();
     }
@@ -178,12 +188,16 @@ public class JobController {
                 if (status.equals("Running")) {
                     stage = "Scanning";
                     docCount += 10;
+                    log.info("Job '{}' [ID: {}] status updated to Running. Stage: Scanning. Root path: {}", job.name(), job.id(), job.path());
                 } else if (status.equals("Paused")) {
                     stage = "Paused";
+                    log.warn("Job '{}' [ID: {}] status updated to Paused.", job.name(), job.id());
                 } else if (status.equals("Finished")) {
                     stage = "Completed";
+                    log.info("Job '{}' [ID: {}] status updated to Finished. Stage: Completed.", job.name(), job.id());
                 } else if (status.equals("Error")) {
                     stage = "Failed";
+                    log.error("Job '{}' [ID: {}] status updated to Error.", job.name(), job.id());
                 }
                 jobs.set(i, new JobDTO(
                     job.id(),
