@@ -34,14 +34,32 @@ graph TD
         Core[Core Ingestion Engine - oc-core]
         Runtime[Bootstrap - oc-runtime]
         FS_Conn[Filesystem Repository - oc-filesystem-repository-connector]
-        Vec_Conn[Vector Output - oc-vector-output-connector]
-        Kafka_Cons[Ingestion Consumer - IngestionConsumer]
+        
+        Ing_Cons[Ingestion Consumer - IngestionConsumer]
+        Tika[Apache Tika Text Extractor]
+        Chunker[Token Chunker]
+        
+        Embed_Cons[Embedding Consumer - EmbeddingConsumer]
+        
+        Writer_Cons[Vector Store Writer - VectorStoreWriterConsumer]
+        Precompute_Model[PrecomputedEmbeddingModel]
+        Vec_Conn[Vector Store Output - oc-vector-output-connector]
         
         Runtime --> Core
         Core --> FS_Conn
-        Core -->|Publish IngestionMessage| Kafka[(Kafka Topic: opencrawling-documents)]
-        Kafka -->|Consume Reference| Kafka_Cons
-        Kafka_Cons -->|Resolve Content & Process| Vec_Conn
+        Core -->|Publish IngestionMessage| Ingest_Topic[(Kafka Topic: opencrawling-ingestion)]
+        
+        Ingest_Topic -->|Consume IngestionMessage| Ing_Cons
+        Ing_Cons -->|Extract Text| Tika
+        Tika --> Chunker
+        Chunker -->|Publish Chunks| Chunk_Topic[(Kafka Topic: opencrawling-chunks)]
+        
+        Chunk_Topic -->|Consume ChunkMessage| Embed_Cons
+        Embed_Cons -->|Publish Embedded| Embed_Topic[(Kafka Topic: opencrawling-embedded)]
+        
+        Embed_Topic -->|Consume EmbeddedMessage| Writer_Cons
+        Writer_Cons --> Precompute_Model
+        Precompute_Model --> Vec_Conn
     end
 
     subgraph Infrastructure [Docker Containers]
@@ -54,8 +72,11 @@ graph TD
     UI_App -->|REST API| Runtime
     Vec_Conn -->|Vectors| PG
     Runtime -->|Job Cache| Redis
-    Vec_Conn -->|Generates Embeddings| Ollama
-    Kafka --> Kafka_Broker
+    Embed_Cons -->|Generates Embeddings| Ollama
+    
+    Ingest_Topic --> Kafka_Broker
+    Chunk_Topic --> Kafka_Broker
+    Embed_Topic --> Kafka_Broker
 ```
 
 ---
@@ -140,7 +161,7 @@ OpenCrawling is designed for high-throughput, horizontal scalability. Since the 
 
 ### 1. Scaling the Ingestion / Processing (Output Connector)
 Vector indexing and embedding generation is typically the primary performance bottleneck because of deep learning model inference (Ollama) and database indexing (pgvector).
-* **Kafka Consumer Group Partitioning**: The `opencrawling-documents` topic is consumed by the `IngestionConsumer` inside the `oc-runtime` service. By configuring the topic with multiple partitions, Kafka will distribute documents among active consumers.
+* **Kafka Consumer Group Partitioning**: The three main topics (`opencrawling-ingestion`, `opencrawling-chunks`, and `opencrawling-embedded`) are consumed by `IngestionConsumer`, `EmbeddingConsumer`, and `VectorStoreWriterConsumer` respectively within the `oc-runtime` service. By configuring these topics with multiple partitions, Kafka distributes load dynamically among active consumer nodes.
 * **Horizontal Scaling of Runtime Instances**: You can run multiple instances of the `oc-runtime` application sharing the same `spring.application.name` and consumer group (`opencrawling-vector-group`). Kafka automatically distributes partitions and load-balances the messages.
 * **Ollama Load Balancing**: Scale out embedding generation by pointing `spring.ai.ollama.base-url` to a load balancer (e.g., NGINX, HAProxy) backed by a cluster of Ollama instances running on GPU-enabled nodes.
 
@@ -153,7 +174,10 @@ The scanning/crawling phase can be distributed by splitting large target sources
 To ensure the messaging system remains fast and responsive:
 1. The **Repository Connector** crawls data, but instead of publishing the entire document content (which could be megabytes of binary data) to Kafka, it saves/references the file on a shared storage medium.
 2. It publishes a lightweight `IngestionMessage` (Claim Check record) to the Kafka topic containing the metadata (URI, file path, version).
-3. The **Consumer Workers** pull the reference, read the file directly from storage, run splitting/chunking, request embeddings, and save the resulting vectors in pgvector.
+3. The **Consumer Workers** process the ingestion:
+   * **`IngestionConsumer`** pulls the reference, reads the file directly from storage, extracts text with **Apache Tika**, splits it into semantic chunks, and publishes them to the chunks topic.
+   * **`EmbeddingConsumer`** pulls the chunks, requests embedding vectors from **Ollama**, and publishes the embedded chunks to the embedded topic.
+   * **`VectorStoreWriterConsumer`** consumes embedded chunks and uses a `PrecomputedEmbeddingModel` to save them directly to pgvector.
 
 ---
 
