@@ -88,23 +88,23 @@ The `oc-admin-ui` provides a modern web-based administration console to monitor 
 ### UI Screenshots
 
 #### 📊 Telemetry Dashboard
-![Dashboard Telemetry](../opencrawling.github.io/assets/screenshots/ui-dashboard.png)
+![Dashboard Telemetry](images/screenshots/ui-dashboard.png)
 *Real-time graphs monitoring job success rates, Kafka queue load, active crawling threads, and index ingestion speed.*
 
 #### 📋 Job Pipeline Scheduler
-![Pipeline Job Management](../opencrawling.github.io/assets/screenshots/ui-pipeline-job-management.png)
+![Pipeline Job Management](images/screenshots/ui-pipeline-job-management.png)
 *Schedule, monitor, start, and pause ingestion crawl tasks. Review document indexing status reports.*
 
 #### 📁 Connector Configurations
-![Connector Registry Configuration](../opencrawling.github.io/assets/screenshots/ui-connector-configuration.png)
+![Connector Registry Configuration](images/screenshots/ui-connector-configuration.png)
 *Manage endpoints and credentials for repositories (SharePoint, S3, Filesystem) and vector search destinations.*
 
 #### ⚙️ Ingestion & Embedding Mappings
-![Ingestion & Embedding Settings](../opencrawling.github.io/assets/screenshots/ui-ingestion-and-embedding-settings.png)
+![Ingestion & Embedding Settings](images/screenshots/ui-ingestion-and-embedding-settings.png)
 *Configure target models (e.g., Ollama, OpenAI) and tune text chunk sizes/overlap boundaries dynamically.*
 
 #### 🪵 Real-Time Ingestion Logs
-![Real-Time Activity Logs](../opencrawling.github.io/assets/screenshots/ui-real-time-activity-logs.png)
+![Real-Time Activity Logs](images/screenshots/ui-real-time-activity-logs.png)
 *Inspect live Java logging streams and Kafka consumer offsets to troubleshoot connector execution.*
 
 ---
