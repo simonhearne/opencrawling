@@ -221,3 +221,10 @@ To ensure the messaging system remains fast and responsive:
 
 - **Java Version Check**: Run `java -version` to confirm you are using Java 25.
 - **Preview Features**: If your IDE fails to compile structured concurrency code, verify that the `--enable-preview` JVM argument is configured for compiler and runtime settings. (It is already pre-configured in `pom.xml`).
+
+---
+
+## Trademark
+
+OpenCrawling&reg; is a registered trademark of the OpenCrawling Organization. For guidelines on using the name and logo, please refer to the [TRADEMARK.md](TRADEMARK.md) file.
+
