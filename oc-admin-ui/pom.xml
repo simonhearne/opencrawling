@@ -12,7 +12,7 @@
     </parent>
 
     <artifactId>oc-admin-ui</artifactId>
-    <name>OpenCrawling Admin UI</name>
+    <name>OpenCrawling - Admin UI</name>
     <description>Modern React-based Admin Interface</description>
 
     <build>
