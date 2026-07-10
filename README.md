@@ -157,13 +157,23 @@ docker compose up -d
 * **Ollama (Port 11434)**: For local embeddings.
 * **Apache Kafka (Port 9092)**: KRaft-mode broker for decoupled, event-driven document processing (internal container communication on port `9094`).
 
-#### 2. Pull the Embedding Model (Ollama)
-The platform is configured to use the `mxbai-embed-large` model for embeddings. 
-Currently the model should be pulled automagically but if you have issues, you have to pull it once by yourself:
-```bash
-docker exec -it ollama ollama pull mxbai-embed-large
-```
-*(You can exit the prompt with `Ctrl+D` once the download starts; Ollama will keep downloading in the background).*
+#### 2. Pull the Embedding Models (Ollama)
+
+OpenCrawling supports configuring different embedding models on a per-job basis and automatically routes them to corresponding PgVector tables. To use the available options, make sure to pull the models you plan to utilize:
+
+*   **mxbai-embed-large (1024-dim, default)**:
+    ```bash
+    docker exec -it ollama ollama pull mxbai-embed-large
+    ```
+*   **nomic-embed-text (768-dim)**:
+    ```bash
+    docker exec -it ollama ollama pull nomic-embed-text
+    ```
+*   **all-minilm (384-dim)**:
+    ```bash
+    docker exec -it ollama ollama pull all-minilm
+    ```
+*(Ollama will download the requested models in the background. Once pulled, OpenCrawling will automatically route them to `vector_store_1024`, `vector_store_768`, or `vector_store_384` respectively).*
 
 ---
 

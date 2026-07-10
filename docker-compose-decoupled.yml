@@ -78,7 +78,7 @@ services:
     depends_on:
       ollama:
         condition: service_healthy
-    command: pull mxbai-embed-large
+    command: sh -c "ollama pull mxbai-embed-large && ollama pull nomic-embed-text && ollama pull all-minilm"
 
   kafka:
     image: apache/kafka:3.7.0
