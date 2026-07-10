@@ -1,0 +1,12 @@
+.git
+.gitignore
+.settings/
+.project
+.classpath
+.DS_Store
+**/target/
+**/node/
+**/node_modules/
+**/dist/
+*.log
+*.tmp

@@ -155,7 +155,7 @@ docker compose up -d
 * **PostgreSQL (Port 5432)**: For job metadata, schema migrations, and pgvector storage.
 * **Redis (Port 6379 / Insight Port 8001)**: For caching and session management.
 * **Ollama (Port 11434)**: For local embeddings.
-* **Apache Kafka (Port 9092)**: KRaft-mode broker for decoupled, event-driven document processing.
+* **Apache Kafka (Port 9092)**: KRaft-mode broker for decoupled, event-driven document processing (internal container communication on port `9094`).
 
 #### 2. Pull the Embedding Model (Ollama)
 The platform is configured to use the `mxbai-embed-large` model for embeddings. 
@@ -165,13 +165,38 @@ docker exec -it ollama ollama pull mxbai-embed-large
 ```
 *(You can exit the prompt with `Ctrl+D` once the download starts; Ollama will keep downloading in the background).*
 
-#### 3. Build the Project (Maven)
+---
+
+### Option A: Run OpenCrawling in Docker Containers (Recommended)
+
+To build and run the OpenCrawling backend runtime and administration UI as containerized services, run:
+
+1. **Build the images**:
+   ```bash
+   docker compose -f docker-compose-apps.yml build
+   ```
+
+2. **Start the applications**:
+   ```bash
+   docker compose -f docker-compose-apps.yml up -d
+   ```
+
+* **Backend Service**: Access the backend runtime and integrated static resources at [http://localhost:8080](http://localhost:8080).
+* **Frontend Service**: Access the standalone React Administration Console at [http://localhost:3000](http://localhost:3000).
+
+---
+
+### Option B: Run OpenCrawling Locally (Development Mode)
+
+If you wish to run the JVM runtime and React frontend directly on your host machine for development:
+
+#### 1. Build the Project (Maven)
 Compile all modules using Java 25. Since we utilize advanced features, preview features must be enabled:
 ```bash
 mvn clean install
 ```
 
-#### 4. Run the Runtime Bootstrap
+#### 2. Run the Runtime Bootstrap
 Start the Spring Boot runtime application:
 ```bash
 mvn spring-boot:run -pl oc-runtime -Dspring-boot.run.profiles=dev
@@ -184,7 +209,7 @@ mvn spring-boot:run -pl oc-runtime -Dspring-boot.run.profiles=dev \
   -Dspring-boot.run.arguments="--spring.opencrawling.crawl-on-startup=true --spring.opencrawling.scan-path=/your/local/directory/to/scan"
 ```
 
-#### 5. Run the Admin UI
+#### 3. Run the Admin UI
 To launch the administration dashboard:
 ```bash
 cd oc-admin-ui
