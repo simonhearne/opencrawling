@@ -63,7 +63,7 @@ graph TD
         Writer_Cons --> Precompute_Model
         Precompute_Model --> Vec_Conn
 
-        McpServer -->|Queries (Enforces ACLs)| Vec_Conn
+        McpServer -->|Queries - Enforces ACLs| Vec_Conn
     end
 
     subgraph Infrastructure [Docker Containers]
