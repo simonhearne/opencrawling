@@ -30,7 +30,8 @@ graph TD
         UI_App[Admin React UI - oc-admin-ui]
     end
 
-    subgraph Platform Runtime [OpenCrawling Ingestion Runtime - oc-runtime]
+    subgraph PlatformRuntime [OpenCrawling Ingestion Runtime - oc-runtime]
+        Runtime_Node([OpenCrawling Ingestion Runtime])
         Core[Core Ingestion Engine - oc-core]
         FS_Conn[Filesystem Repository - oc-filesystem-repository-connector]
         
@@ -80,9 +81,9 @@ graph TD
         OpenAI[OpenAI Platform]
     end
 
-    UI_App -->|REST API| Platform Runtime
+    UI_App -->|REST API| Runtime_Node
     Vec_Conn -->|Vectors| PG
-    Platform Runtime -->|Job Cache| Redis
+    Runtime_Node -->|Job Cache| Redis
     
     Model_Factory -->|Local Inference| Ollama
     Model_Factory -->|Cloud Inference| OpenAI
