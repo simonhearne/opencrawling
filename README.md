@@ -318,6 +318,12 @@ To ensure the messaging system remains fast and responsive:
 
 ---
 
+## 📬 Contact & Support
+
+For general inquiries, community updates, or security-sensitive disclosures, please contact the maintainers at [info@opencrawling.org](mailto:info@opencrawling.org).
+
+---
+
 ## Trademark
 
 OpenCrawling&reg; is a registered trademark of the OpenCrawling Organization. For guidelines on using the name and logo, please refer to the [TRADEMARK.md](TRADEMARK.md) file.
