@@ -93,6 +93,62 @@ public class McpVectorServer {
             String acl
     ) {}
 
+    private boolean isAccessible(Map<String, Object> metadata, String userPrincipal, List<String> userGroups) {
+        // 1. If security metadata is missing, fall back to flat "acl" string check for backward compatibility
+        if (metadata == null || !metadata.containsKey("security")) {
+            String aclVal = (String) (metadata != null ? metadata.getOrDefault("acl", "public") : "public");
+            if ("public".equalsIgnoreCase(aclVal)) return true;
+            if (userPrincipal != null && userPrincipal.equalsIgnoreCase(aclVal)) return true;
+            if (userGroups != null && userGroups.contains(aclVal)) return true;
+            return false;
+        }
+
+        // 2. Parse the security object
+        Object securityObj = metadata.get("security");
+        if (!(securityObj instanceof Map)) {
+            return false;
+        }
+
+        Map<?, ?> securityMap = (Map<?, ?>) securityObj;
+        Object permissionsObj = securityMap.get("permissions");
+        if (!(permissionsObj instanceof List)) return false;
+        List<?> permissionsList = (List<?>) permissionsObj;
+
+        boolean hasReadAccess = false;
+
+        for (Object permObj : permissionsList) {
+            if (permObj instanceof Map) {
+                Map<?, ?> perm = (Map<?, ?>) permObj;
+                String identity = (String) perm.get("identity");
+                String identityType = (String) perm.get("identityType");
+                String access = (String) perm.get("access");
+
+                if (identity == null || access == null) continue;
+
+                // Check if this rule applies to the user
+                boolean matchesUser = false;
+                if ("public".equalsIgnoreCase(identity) || "public".equalsIgnoreCase(identityType)) {
+                    matchesUser = true;
+                } else if (userPrincipal != null && userPrincipal.equalsIgnoreCase(identity)) {
+                    matchesUser = true;
+                } else if (userGroups != null && userGroups.stream().anyMatch(g -> g.equalsIgnoreCase(identity))) {
+                    matchesUser = true;
+                }
+
+                if (matchesUser) {
+                    if ("deny".equalsIgnoreCase(access)) {
+                        // Explicit DENY rules override everything in OIS
+                        return false;
+                    } else if ("read".equalsIgnoreCase(access) || "write".equalsIgnoreCase(access)) {
+                        hasReadAccess = true;
+                    }
+                }
+            }
+        }
+
+        return hasReadAccess;
+    }
+
     @McpTool(description = "Perform a secure similarity search on vectorized enterprise knowledge documents. Results are filtered on the server side using the caller's identity (principal/groups) and security Access Control Lists (ACLs) associated with each document, ensuring the LLM never receives unauthorized content.")
     public List<DocumentSearchResult> secureVectorSearch(
             @McpToolParam(description = "The natural language query or keywords to search for", required = true) String query,
@@ -118,8 +174,9 @@ public class McpVectorServer {
         }
 
         // Expand filter if user roles/groups are provided
+        List<String> rolesList = new ArrayList<>();
         if (userRoles != null && !userRoles.trim().isBlank()) {
-            List<String> rolesList = Arrays.stream(userRoles.split(","))
+            rolesList = Arrays.stream(userRoles.split(","))
                     .map(String::trim)
                     .filter(s -> !s.isEmpty())
                     .toList();
@@ -137,9 +194,12 @@ public class McpVectorServer {
 
         try {
             List<Document> docs = getVectorStore(dimensions).similaritySearch(searchRequest);
-            log.info("Found {} secure matches in Vector Store for query '{}'", docs.size(), query);
+            log.info("Found {} pre-filtered candidates in Vector Store for query '{}'", docs.size(), query);
 
+            final List<String> finalRolesList = rolesList;
             return docs.stream()
+                    .filter(doc -> isAccessible(doc.getMetadata(), userPrincipal, finalRolesList))
+                    .limit(limit)
                     .map(doc -> new DocumentSearchResult(
                             doc.getId(),
                             (String) doc.getMetadata().getOrDefault("uri", ""),
@@ -185,19 +245,33 @@ public class McpVectorServer {
         var finalExpression = b.and(b.eq("uri", documentUri), securityExpression).build();
 
         SearchRequest searchRequest = SearchRequest.builder()
-                .query("") // blank search for exact metadata matching
+                .query("")
                 .filterExpression(finalExpression)
-                .topK(1)
+                .topK(20)
                 .build();
 
         try {
             List<Document> docs = getVectorStore(dimensions).similaritySearch(searchRequest);
-            if (docs.isEmpty()) {
+            
+            List<String> rolesList = new ArrayList<>();
+            if (userRoles != null && !userRoles.trim().isBlank()) {
+                rolesList = Arrays.stream(userRoles.split(","))
+                        .map(String::trim)
+                        .filter(s -> !s.isEmpty())
+                        .toList();
+            }
+
+            final List<String> finalRolesList = rolesList;
+            List<Document> accessibleDocs = docs.stream()
+                    .filter(doc -> isAccessible(doc.getMetadata(), userPrincipal, finalRolesList))
+                    .toList();
+
+            if (accessibleDocs.isEmpty()) {
                 log.warn("Document with URI '{}' not found or access denied for user '{}'", documentUri, userPrincipal);
                 throw new NoSuchElementException("Document not found or access denied.");
             }
 
-            Document doc = docs.get(0);
+            Document doc = accessibleDocs.get(0);
             return new DocumentDetailsResult(
                     doc.getId(),
                     (String) doc.getMetadata().getOrDefault("uri", ""),
@@ -221,43 +295,35 @@ public class McpVectorServer {
     ) {
         log.info("MCP List Accessible Sources Request. Principal: '{}', Roles: '{}', Dimensions: {}", userPrincipal, userRoles, dimensions);
 
-        FilterExpressionBuilder b = new FilterExpressionBuilder();
-        var securityExpression = b.eq("acl", "public");
-
-        if (userPrincipal != null && !userPrincipal.trim().isBlank()) {
-            securityExpression = b.or(securityExpression, b.eq("acl", userPrincipal.trim()));
-        }
-
-        if (userRoles != null && !userRoles.trim().isBlank()) {
-            List<String> rolesList = Arrays.stream(userRoles.split(","))
-                    .map(String::trim)
-                    .filter(s -> !s.isEmpty())
-                    .toList();
-            if (!rolesList.isEmpty()) {
-                securityExpression = b.or(securityExpression, b.in("acl", rolesList));
-            }
-        }
-
         SearchRequest searchRequest = SearchRequest.builder()
-                .query("") // retrieve all matches
-                .filterExpression(securityExpression.build())
-                .topK(100) // limit list size
+                .query("")
+                .topK(200)
                 .build();
 
         try {
             List<Document> docs = getVectorStore(dimensions).similaritySearch(searchRequest);
             
-            // Map to summary structure
+            List<String> rolesList = new ArrayList<>();
+            if (userRoles != null && !userRoles.trim().isBlank()) {
+                rolesList = Arrays.stream(userRoles.split(","))
+                        .map(String::trim)
+                        .filter(s -> !s.isEmpty())
+                        .toList();
+            }
+
+            final List<String> finalRolesList = rolesList;
             return docs.stream()
+                    .filter(doc -> isAccessible(doc.getMetadata(), userPrincipal, finalRolesList))
                     .map(doc -> {
                         Map<String, Object> summary = new HashMap<>();
                         summary.put("id", doc.getId());
                         summary.put("uri", doc.getMetadata().getOrDefault("uri", ""));
                         summary.put("acl", doc.getMetadata().getOrDefault("acl", "public"));
+                        summary.put("security", doc.getMetadata().get("security"));
                         summary.put("lastModified", doc.getMetadata().getOrDefault("lastModified", ""));
                         return summary;
                     })
-                    .distinct() // eliminate duplicate chunks of the same document
+                    .distinct()
                     .toList();
         } catch (Exception e) {
             log.error("Failed to list accessible sources: {}", e.getMessage(), e);

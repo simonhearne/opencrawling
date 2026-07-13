@@ -93,6 +93,7 @@ public class IngestionConsumer {
                 Map<String, Object> metadata = new HashMap<>(message.metadata());
                 metadata.put("uri", message.uri());
                 metadata.put("acl", message.acl());
+                metadata.put("security", message.security());
                 metadata.put("lastModified", message.lastModified());
                 
                 // Construct Spring AI Document

@@ -73,12 +73,15 @@ class OpenCrawlingIT {
         // 3. Verify the content in the Vector Stores using a similarity search with retries
         log.info("Performing similarity search for 'document orchestration' with retries across available vector stores...");
         List<Document> results = List.of();
+        String expectedUri = testFile.toUri().toString();
         for (int i = 0; i < 15; i++) {
             for (VectorStore store : vectorStores) {
                 try {
                     results = store.similaritySearch(
                             SearchRequest.builder()
                                     .query("document orchestration")
+                                    .filterExpression(new org.springframework.ai.vectorstore.filter.FilterExpressionBuilder()
+                                            .eq("uri", expectedUri).build())
                                     .topK(5)
                                     .similarityThreshold(0.1) // Lower threshold to ensure we find it
                                     .build()

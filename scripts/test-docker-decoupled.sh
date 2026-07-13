@@ -138,14 +138,26 @@ until [ "$(docker inspect -f '{{.State.Running}}' oc-crawler-service 2>/dev/null
 done
 echo -e "${GREEN}oc-crawler-service finished directory scanning!${NC}"
 
-# Wait for messaging pipeline to process document vectors (sleep 10s)
-echo -e "${YELLOW}Waiting for Kafka consumers to process and store vectors (10 seconds)...${NC}"
-sleep 10
+# Wait for messaging pipeline to process document vectors (with retries)
+echo -e "${YELLOW}Waiting for Kafka consumers to process and store vectors...${NC}"
+RECORD_COUNT=0
+ELAPSED=0
+TIMEOUT=30
+until [ "$RECORD_COUNT" -gt 0 ] 2>/dev/null || [ $ELAPSED -ge $TIMEOUT ]; do
+  sleep 2
+  ELAPSED=$((ELAPSED + 2))
+  RECORD_COUNT=$(docker exec -i postgres-vector-decoupled psql -U opencrawling -d opencrawling -t -A -P pager=off -c "SELECT (SELECT count(*) FROM vector_store) + (SELECT count(*) FROM vector_store_1024);" 2>/dev/null || echo "0")
+  # Trim spaces and check if empty
+  RECORD_COUNT=$(echo "$RECORD_COUNT" | tr -d '[:space:]')
+  if [ -z "$RECORD_COUNT" ]; then
+    RECORD_COUNT=0
+  fi
+  printf "  Elapsed: %ds, Records count: %s\r" "$ELAPSED" "$RECORD_COUNT"
+done
+echo ""
 
 # Verify pgvector database content
 echo -e "${YELLOW}Verifying PgVector table records...${NC}"
-RECORD_COUNT=$(docker exec -i postgres-vector-decoupled psql -U opencrawling -d opencrawling -t -A -P pager=off -c "SELECT (SELECT count(*) FROM vector_store) + (SELECT count(*) FROM vector_store_1024);" || echo "0")
-
 echo -e "PgVector Records count: ${GREEN}$RECORD_COUNT${NC}"
 if [ "$RECORD_COUNT" -eq 0 ] || [ "$RECORD_COUNT" == "failed" ]; then
   echo -e "${RED}Decoupled integration test failed: 0 records found in pgvector database!${NC}"
@@ -170,6 +182,10 @@ fi
 echo -e "${GREEN}========================================================================${NC}"
 echo -e "${GREEN}SUCCESS: Decoupled Multi-Service Pipeline Integration Test Passed!${NC}"
 echo -e "${GREEN}========================================================================${NC}"
+
+# Clean up temporary test files
+echo -e "${YELLOW}Cleaning up temporary test files...${NC}"
+rm -f "$TEST_FILE"
 
 # Tear down the test environment
 echo -e "${YELLOW}Tearing down test environment...${NC}"

@@ -86,6 +86,7 @@ public class JobOrchestrator {
                                 doc.uri(),
                                 doc.metadata(),
                                 doc.acl(),
+                                doc.security(),
                                 doc.lastModified().toString(),
                                 transformationConnector,
                                 finalEngine,

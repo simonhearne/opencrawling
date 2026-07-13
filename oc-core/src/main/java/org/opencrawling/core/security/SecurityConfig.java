@@ -13,31 +13,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.opencrawling.core.document;
+package org.opencrawling.core.security;
 
-import java.io.InputStream;
-import java.util.Map;
 import java.util.List;
-import java.time.Instant;
-import org.opencrawling.core.security.SecurityConfig;
 
-public record RepositoryDocument(
-    String id,
-    String uri,
-    InputStream contentStream,
-    Map<String, List<String>> metadata,
-    String acl,
-    SecurityConfig security,
-    Instant lastModified
+public record SecurityConfig(
+    boolean inheritanceEnabled,
+    List<PermissionRule> permissions
 ) {
-    public RepositoryDocument(
-        String id,
-        String uri,
-        InputStream contentStream,
-        Map<String, List<String>> metadata,
-        String acl,
-        Instant lastModified
-    ) {
-        this(id, uri, contentStream, metadata, acl, SecurityConfig.createPublic(), lastModified);
+    public static SecurityConfig createPublic() {
+        return new SecurityConfig(false, List.of(
+            new PermissionRule("public", "public", "Public Access", "read")
+        ));
     }
 }

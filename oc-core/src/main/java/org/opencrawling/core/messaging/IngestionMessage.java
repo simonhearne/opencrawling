@@ -17,6 +17,7 @@ package org.opencrawling.core.messaging;
 
 import java.util.List;
 import java.util.Map;
+import org.opencrawling.core.security.SecurityConfig;
 
 /**
  * Message payload sent to Kafka to trigger vector store processing.
@@ -27,8 +28,22 @@ public record IngestionMessage(
     String uri,
     Map<String, List<String>> metadata,
     String acl,
+    SecurityConfig security,
     String lastModified,
     String transformationConnector,
     String transformationEngine,
     Map<String, String> transformationConfig
-) {}
+) {
+    public IngestionMessage(
+        String documentId,
+        String uri,
+        Map<String, List<String>> metadata,
+        String acl,
+        String lastModified,
+        String transformationConnector,
+        String transformationEngine,
+        Map<String, String> transformationConfig
+    ) {
+        this(documentId, uri, metadata, acl, SecurityConfig.createPublic(), lastModified, transformationConnector, transformationEngine, transformationConfig);
+    }
+}
