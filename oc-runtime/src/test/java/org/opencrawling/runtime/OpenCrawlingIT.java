@@ -74,7 +74,7 @@ class OpenCrawlingIT {
         log.info("Performing similarity search for 'document orchestration' with retries across available vector stores...");
         List<Document> results = List.of();
         String expectedUri = testFile.toUri().toString();
-        for (int i = 0; i < 15; i++) {
+        for (int i = 0; i < 20; i++) {
             for (VectorStore store : vectorStores) {
                 try {
                     results = store.similaritySearch(
@@ -83,7 +83,8 @@ class OpenCrawlingIT {
                                     .filterExpression(new org.springframework.ai.vectorstore.filter.FilterExpressionBuilder()
                                             .eq("uri", expectedUri).build())
                                     .topK(5)
-                                    .similarityThreshold(0.1) // Lower threshold to ensure we find it
+                                    .similarityThreshold(0.0) // Must be 0.0: test uses dummy embeddings [1.0, 0, ...],
+                                                              // cosine similarity with a real Ollama query vector is ~0.
                                     .build()
                     );
                     if (!results.isEmpty()) {

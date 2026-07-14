@@ -105,6 +105,44 @@ export default function JobTable({ setActiveView }: JobTableProps) {
   const [formError, setFormError] = useState('')
   const [isSaving, setIsSaving] = useState(false)
 
+  const getPathFieldMeta = () => {
+    const selected = repositoryConnectors.find(c => c.name === formRepository);
+    const cls = selected ? selected.className : '';
+    
+    switch (cls) {
+      case 'org.opencrawling.crawler.connectors.filesystem.FileConnector':
+        return {
+          label: 'Root Scan Path',
+          placeholder: 'e.g. /Users/me/documents',
+          description: 'The root folder on the local filesystem to scan.'
+        };
+      case 'org.opencrawling.crawler.connectors.webcrawler.WebcrawlerConnector':
+        return {
+          label: 'Crawl Seed URL',
+          placeholder: 'e.g. https://website.com',
+          description: 'The starting URL for the web crawler.'
+        };
+      case 'org.opencrawling.crawler.connectors.jcifs.JCIFSConnector':
+        return {
+          label: 'SMB Share Path',
+          placeholder: 'e.g. smb://server/share/folder',
+          description: 'The SMB network share folder path.'
+        };
+      case 'org.opencrawling.alfresco.AlfrescoRepositoryConnector':
+        return {
+          label: 'Crawl Folder Path / Node ID / CMIS Query',
+          placeholder: 'e.g. -root-, /Company Home/Shared, or a specific Node UUID',
+          description: 'Define the starting location in Alfresco. Use -root- to scan the whole repository, or provide a folder path or node UUID.'
+        };
+      default:
+        return {
+          label: 'Crawl Scan Path / URL',
+          placeholder: 'e.g. /Users/me/documents or https://website.com',
+          description: 'The scanning entry point for the repository connector.'
+        };
+    }
+  };
+
   const fetchJobs = async (showLoader = false) => {
     if (showLoader) setIsLoading(true)
     try {
@@ -689,16 +727,17 @@ export default function JobTable({ setActiveView }: JobTableProps) {
                   <div className="space-y-2">
                     <label className="text-sm font-medium flex items-center gap-1.5">
                       <FolderOpen className="w-4 h-4 text-amber-400" />
-                      Crawl Scan Path / URL
+                      {getPathFieldMeta().label}
                     </label>
                     <input 
                       type="text"
                       value={formPath}
                       onChange={(e) => setFormPath(e.target.value)}
-                      placeholder="/Users/me/documents or https://website.com"
+                      placeholder={getPathFieldMeta().placeholder}
                       className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground font-mono"
                       required
                     />
+                    <p className="text-xs text-muted-foreground">{getPathFieldMeta().description}</p>
                   </div>
                 </div>
 

@@ -48,3 +48,6 @@ application-local.properties
 # Crash dumps
 drwtsn32.log
 user.dmp
+
+# Local runtime data
+oc-runtime/data/

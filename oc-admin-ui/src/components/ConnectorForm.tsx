@@ -125,6 +125,7 @@ export default function ConnectorForm() {
       { label: 'File System', value: 'org.opencrawling.crawler.connectors.filesystem.FileConnector' },
       { label: 'Web Crawler', value: 'org.opencrawling.crawler.connectors.webcrawler.WebcrawlerConnector' },
       { label: 'Windows Share (JCIFS)', value: 'org.opencrawling.crawler.connectors.jcifs.JCIFSConnector' },
+      { label: 'Alfresco Content Services Repository', value: 'org.opencrawling.alfresco.AlfrescoRepositoryConnector' },
     ],
     transformation: [
       { label: 'Ollama Embedding', value: 'org.opencrawling.embedding.OllamaEmbeddingConnector' },
@@ -317,6 +318,49 @@ export default function ConnectorForm() {
                           className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none"
                         />
                         <p className="text-xs text-muted-foreground">The root folder on the local filesystem that this connector is authorized to scan.</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Alfresco Content Services Repository */}
+                  {selectedClass === 'org.opencrawling.alfresco.AlfrescoRepositoryConnector' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2 col-span-2">
+                        <label className="text-sm font-medium">Alfresco API URL</label>
+                        <input 
+                          {...register('configuration.url', { required: true })}
+                          placeholder="http://localhost:8080/alfresco/api/-default-/public/alfresco/versions/1"
+                          defaultValue="http://localhost:8080/alfresco/api/-default-/public/alfresco/versions/1"
+                          className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none font-mono"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Username</label>
+                        <input 
+                          {...register('configuration.username', { required: true })}
+                          placeholder="admin"
+                          defaultValue="admin"
+                          className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Password</label>
+                        <input 
+                          type="password"
+                          {...register('configuration.password', { required: true })}
+                          placeholder="admin"
+                          defaultValue="admin"
+                          className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none font-mono"
+                        />
+                      </div>
+                      <div className="space-y-2 col-span-2">
+                        <label className="text-sm font-medium">Batch Size</label>
+                        <input 
+                          type="number"
+                          {...register('configuration.batchSize')}
+                          defaultValue="100"
+                          className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-primary/50 outline-none"
+                        />
                       </div>
                     </div>
                   )}

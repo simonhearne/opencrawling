@@ -2,7 +2,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg?style=flat)](LICENSE)
 [![Java Version](https://img.shields.io/badge/Java-25-orange.svg?style=flat&logo=openjdk&logoColor=white)](https://jdk.java.net/25/)
-[![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.4+-green.svg?style=flat&logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
+[![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.0+-green.svg?style=flat&logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
 [![Docker](https://img.shields.io/badge/Docker-Supported-blue.svg?style=flat&logo=docker&logoColor=white)](https://www.docker.com/)
 [![Apache Kafka](https://img.shields.io/badge/Apache_Kafka-Supported-black.svg?style=flat&logo=apachekafka&logoColor=white)](https://kafka.apache.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17+-blue.svg?style=flat&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
@@ -222,6 +222,17 @@ This spins up the database/event-stream dependencies alongside five decoupled Op
 * **React Admin UI Console**: Access the administration dashboard at [http://localhost:3000](http://localhost:3000).
 * **Secure MCP Server**: Connect your AI Client / IDE directly to [http://localhost:8080](http://localhost:8080) over SSE.
 
+### Option A.3: Quick Start with Released Containers (Pre-built Release Distribution)
+
+To run the complete decoupled pipeline using the official pre-built release containers from the GitHub Container Registry (without building the services locally):
+
+1. **Start the release pipeline**:
+   ```bash
+   docker compose -f docker-compose-decoupled-dist.yml up -d
+   ```
+
+This pulls the official `ghcr.io/opencrawling/...` images directly, allowing you to spin up the entire architecture (Crawler, Ingestion, Embedding Service, Writer, MCP Server, and Admin UI) instantly.
+
 #### Running the Decoupled Integration Test
 
 We provide a fully automated end-to-end integration test script that builds, boots, tests, and cleanses the entire decoupled environment:
@@ -319,6 +330,8 @@ To ensure the messaging system remains fast and responsive:
 ---
 
 ## 📬 Contact & Support
+
+Join our [Slack Community](https://join.slack.com/t/opencrawling/shared_invite/zt-43r2anb6q-YLoBsOrxCCcBWU5Up3P1rw) to chat with developers, share feedback, or ask configuration questions.
 
 For general inquiries, community updates, or security-sensitive disclosures, please contact the maintainers at [info@opencrawling.org](mailto:info@opencrawling.org).
 

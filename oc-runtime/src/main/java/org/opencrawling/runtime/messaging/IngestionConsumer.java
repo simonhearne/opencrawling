@@ -35,6 +35,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.UUID;
 
@@ -75,12 +76,23 @@ public class IngestionConsumer {
                 }
 
                 // Extract raw text using Apache Tika
-                String text = tika.parseToString(new java.io.ByteArrayInputStream(contentBytes));
+                String text = "";
+                try {
+                    text = tika.parseToString(new java.io.ByteArrayInputStream(contentBytes));
+                } catch (Exception e) {
+                    log.warn("Tika failed to parse document {}: {}. Falling back to plain text check.", message.documentId(), e.getMessage());
+                }
                 
                 // Fallback for plain text if Tika fails but we have bytes
                 if (text.isBlank() && contentBytes.length > 0) {
-                    text = new String(contentBytes, java.nio.charset.StandardCharsets.UTF_8);
+                    String mimeType = String.valueOf(message.metadata().getOrDefault("mimeType", List.of("text/plain")));
+                    if (mimeType.contains("text") || mimeType.contains("json") || mimeType.contains("xml") || mimeType.contains("csv")) {
+                        text = new String(contentBytes, java.nio.charset.StandardCharsets.UTF_8);
+                    }
                 }
+
+                // Remove null characters to prevent PostgreSQL "invalid byte sequence for encoding UTF8: 0x00" error
+                text = text.replace("\u0000", "");
 
                 if (text.isBlank()) {
                     log.warn("Document {} extracted text is empty, skipping.", message.documentId());
@@ -90,7 +102,18 @@ public class IngestionConsumer {
                 log.info("Extracted {} characters from document: {}", text.length(), message.documentId());
 
                 // Map repository metadata to Vector Document metadata
-                Map<String, Object> metadata = new HashMap<>(message.metadata());
+                Map<String, Object> metadata = new HashMap<>();
+                message.metadata().forEach((key, val) -> {
+                    if (val != null) {
+                        List<String> cleanedList = new ArrayList<>();
+                        for (String s : val) {
+                            if (s != null) {
+                                cleanedList.add(s.replace("\u0000", ""));
+                            }
+                        }
+                        metadata.put(key, cleanedList);
+                    }
+                });
                 metadata.put("uri", message.uri());
                 metadata.put("acl", message.acl());
                 metadata.put("security", message.security());

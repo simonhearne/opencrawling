@@ -25,6 +25,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.opencrawling.core.connector.OutputConnector;
+import org.opencrawling.core.connector.RepositoryConnector;
+import org.opencrawling.filesystem.FileSystemRepositoryConnector;
+import org.opencrawling.runtime.orchestrator.JobOrchestrator;
 
 @RestController
 @RequestMapping("/api/jobs")
@@ -33,8 +39,22 @@ public class JobController {
     private static final Logger log = LoggerFactory.getLogger(JobController.class);
     private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private final List<JobDTO> jobs;
+    private final JobOrchestrator jobOrchestrator;
+    private final FileSystemRepositoryConnector fileSystemRepositoryConnector;
+    private final OutputConnector outputConnector;
+    private final JdbcTemplate jdbcTemplate;
 
-    public JobController() {
+    @Autowired
+    public JobController(
+            JobOrchestrator jobOrchestrator,
+            FileSystemRepositoryConnector fileSystemRepositoryConnector,
+            OutputConnector outputConnector,
+            JdbcTemplate jdbcTemplate) {
+        this.jobOrchestrator = jobOrchestrator;
+        this.fileSystemRepositoryConnector = fileSystemRepositoryConnector;
+        this.outputConnector = outputConnector;
+        this.jdbcTemplate = jdbcTemplate;
+        
         // Initial mock data defaults
         List<JobDTO> defaults = new ArrayList<>();
         defaults.add(new JobDTO("1", "WebCrawler_Sito_A", "FileSystem_Local", "PGVector_Output", "LDAP", "/var/www/site_a", "Running", "Scanning", 12450, LocalDateTime.now().minusHours(1).format(formatter), "Ollama_Embedding_Default"));
@@ -179,6 +199,63 @@ public class JobController {
     public ResponseEntity<Void> startJob(@PathVariable String id) {
         log.info("Starting job {}", id);
         updateJobStatus(id, "Running");
+
+        // Find the job to get parameters
+        JobDTO activeJob = jobs.stream()
+            .filter(j -> j.id().equals(id))
+            .findFirst()
+            .orElse(null);
+            
+        if (activeJob != null) {
+            // Find the repository connector configuration in connectors.json
+            RepositoryConnector resolvedConnector = null;
+            try {
+                List<ConnectorController.ConnectorDTO> connectors = 
+                    PersistenceHelper.loadList("connectors.json", ConnectorController.ConnectorDTO.class, List.of());
+                ConnectorController.ConnectorDTO connConfig = connectors.stream()
+                    .filter(c -> c.name().equals(activeJob.repositoryConnector()))
+                    .findFirst()
+                    .orElse(null);
+                    
+                if (connConfig != null) {
+                    if (connConfig.className().contains("Alfresco")) {
+                        String url = connConfig.configuration().getOrDefault("url", "http://localhost:8080/alfresco/api/-default-/public/alfresco/versions/1");
+                        String username = connConfig.configuration().getOrDefault("username", "admin");
+                        String password = connConfig.configuration().getOrDefault("password", "admin");
+                        int batchSize = 100;
+                        try {
+                            batchSize = Integer.parseInt(connConfig.configuration().getOrDefault("batchSize", "100"));
+                        } catch (Exception e) {}
+                        resolvedConnector = new org.opencrawling.alfresco.AlfrescoRepositoryConnector(url, username, password, batchSize);
+                    } else {
+                        resolvedConnector = fileSystemRepositoryConnector;
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Failed to resolve repository connector for job {}: {}", id, e.getMessage());
+            }
+            
+            if (resolvedConnector == null) {
+                resolvedConnector = fileSystemRepositoryConnector; // Fallback
+            }
+            
+            final RepositoryConnector finalConnector = resolvedConnector;
+            
+            // Execute real crawler inside virtual thread
+            Thread.ofVirtual().start(() -> {
+                try {
+                    log.info("Starting real background crawl job for path: {}", activeJob.path());
+                    jobOrchestrator.runJob(finalConnector, outputConnector, activeJob.path(), activeJob.transformationConnector());
+                    log.info("Real background crawl job completed successfully!");
+                    // update status to completed when done, and pull actual db document count
+                    updateJobStatusAndStage(id, "Finished", "Completed", getActualDbDocCount());
+                } catch (Exception e) {
+                    log.error("Real background crawl job failed: ", e);
+                    updateJobStatusAndStage(id, "Error", "Failed", getActualDbDocCount());
+                }
+            });
+        }
+
         return ResponseEntity.ok().build();
     }
 
@@ -234,6 +311,45 @@ public class JobController {
             }
         }
         PersistenceHelper.save("jobs.json", jobs);
+    }
+
+    private void updateJobStatusAndStage(String id, String status, String stage, long docCount) {
+        for (int i = 0; i < jobs.size(); i++) {
+            JobDTO job = jobs.get(i);
+            if (job.id().equals(id)) {
+                jobs.set(i, new JobDTO(
+                    job.id(),
+                    job.name(),
+                    job.repositoryConnector(),
+                    job.outputConnector(),
+                    job.authorityConnector(),
+                    job.path(),
+                    status,
+                    stage,
+                    docCount,
+                    LocalDateTime.now().format(formatter),
+                    job.transformationConnector()
+                ));
+                break;
+            }
+        }
+        PersistenceHelper.save("jobs.json", jobs);
+    }
+
+    private long getActualDbDocCount() {
+        try {
+            Long count = jdbcTemplate.queryForObject(
+                "SELECT (SELECT count(*) FROM vector_store) + " +
+                "(SELECT count(*) FROM vector_store_1024) + " +
+                "(SELECT count(*) FROM vector_store_768) + " +
+                "(SELECT count(*) FROM vector_store_384)", 
+                Long.class
+            );
+            return count != null ? count : 0;
+        } catch (Exception e) {
+            log.warn("Failed to query pgvector doc count: {}", e.getMessage());
+            return 0;
+        }
     }
 
     public static record JobDTO(

@@ -15,6 +15,7 @@
  */
 package org.opencrawling.runtime;
 
+import java.util.List;
 import org.opencrawling.core.connector.OutputConnector;
 import org.opencrawling.core.connector.RepositoryConnector;
 import org.opencrawling.runtime.orchestrator.JobOrchestrator;
@@ -44,16 +45,37 @@ public class OpenCrawlingApplication {
     @Value("${spring.opencrawling.transformation-connector:Ollama_Embedding_Default}")
     private String transformationConnector;
 
+    @Value("${spring.opencrawling.repository-connector-type:filesystem}")
+    private String repositoryConnectorType;
+
     @SuppressWarnings("unused")
     @Bean
     @Profile("!test")
     public CommandLineRunner runSampleJob(
             JobOrchestrator orchestrator,
-            RepositoryConnector repositoryConnector,
+            List<RepositoryConnector> repositoryConnectors,
             OutputConnector outputConnector) {
         return args -> {
             log.info("--- OpenCrawling Bootstrap ---");
-            log.info("Detected Repository Connector: {}", repositoryConnector.getName());
+            log.info("Requested Repository Connector Type: {}", repositoryConnectorType);
+
+            RepositoryConnector activeConnector = repositoryConnectors.stream()
+                .filter(c -> {
+                    if ("alfresco".equalsIgnoreCase(repositoryConnectorType)) {
+                        return c.getClass().getSimpleName().toLowerCase().contains("alfresco");
+                    } else {
+                        return c.getClass().getSimpleName().toLowerCase().contains("file");
+                    }
+                })
+                .findFirst()
+                .orElse(repositoryConnectors.isEmpty() ? null : repositoryConnectors.get(0));
+
+            if (activeConnector == null) {
+                log.error("No Repository Connector found!");
+                return;
+            }
+
+            log.info("Detected Repository Connector: {}", activeConnector.getName());
             log.info("Detected Output Connector: {}", outputConnector.getName());
 
             if (crawlOnStartup) {
@@ -61,7 +83,7 @@ public class OpenCrawlingApplication {
                     log.warn("Crawl on startup is enabled, but spring.opencrawling.scan-path is not set. Skipping sample crawl.");
                 } else {
                     log.info("Triggering sample crawl job on path: {} with transformation connector: {}", scanPath, transformationConnector);
-                    orchestrator.runJob(repositoryConnector, outputConnector, scanPath, transformationConnector);
+                    orchestrator.runJob(activeConnector, outputConnector, scanPath, transformationConnector);
                 }
             } else {
                 log.info("Sample crawl job on startup is disabled. Use properties to enable it (spring.opencrawling.crawl-on-startup=true).");

@@ -28,6 +28,7 @@ import reactor.core.publisher.Mono;
 
 import java.io.InputStream;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.HashMap;
 
@@ -68,12 +69,23 @@ public class VectorOutputConnector implements OutputConnector {
                 }
 
                 // Extract raw text using Apache Tika (now from bytes to avoid stream issues)
-                String text = tika.parseToString(new java.io.ByteArrayInputStream(contentBytes));
+                String text = "";
+                try {
+                    text = tika.parseToString(new java.io.ByteArrayInputStream(contentBytes));
+                } catch (Exception e) {
+                    log.warn("Tika failed to parse document {}: {}. Falling back to plain text check.", document.id(), e.getMessage());
+                }
                 
                 // Fallback for plain text if Tika fails but we have bytes
                 if (text.isBlank() && contentBytes.length > 0) {
-                    text = new String(contentBytes, java.nio.charset.StandardCharsets.UTF_8);
+                    String mimeType = String.valueOf(document.metadata().getOrDefault("mimeType", List.of("text/plain")));
+                    if (mimeType.contains("text") || mimeType.contains("json") || mimeType.contains("xml") || mimeType.contains("csv")) {
+                        text = new String(contentBytes, java.nio.charset.StandardCharsets.UTF_8);
+                    }
                 }
+
+                // Remove null characters to prevent PostgreSQL "invalid byte sequence for encoding UTF8: 0x00" error
+                text = text.replace("\u0000", "");
 
                 if (text.isBlank()) {
                     log.warn("Document {} extracted text is empty, skipping vector store.", document.id());
@@ -83,7 +95,18 @@ public class VectorOutputConnector implements OutputConnector {
                 log.info("Extracted {} characters from document: {}", text.length(), document.id());
 
                 // Map repository metadata to Vector Document metadata
-                Map<String, Object> metadata = new HashMap<>(document.metadata());
+                Map<String, Object> metadata = new HashMap<>();
+                document.metadata().forEach((key, val) -> {
+                    if (val != null) {
+                        List<String> cleanedList = new ArrayList<>();
+                        for (String s : val) {
+                            if (s != null) {
+                                cleanedList.add(s.replace("\u0000", ""));
+                            }
+                        }
+                        metadata.put(key, cleanedList);
+                    }
+                });
                 metadata.put("uri", document.uri());
                 metadata.put("acl", document.acl());
                 metadata.put("lastModified", document.lastModified().toString());

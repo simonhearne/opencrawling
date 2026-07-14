@@ -22,17 +22,19 @@ WORKDIR /app
 COPY pom.xml .
 COPY oc-core/pom.xml oc-core/
 COPY oc-filesystem-repository-connector/pom.xml oc-filesystem-repository-connector/
+COPY oc-alfresco-repository-connector/pom.xml oc-alfresco-repository-connector/
 COPY oc-vector-output-connector/pom.xml oc-vector-output-connector/
 COPY oc-admin-ui/pom.xml oc-admin-ui/
 COPY oc-runtime/pom.xml oc-runtime/
 COPY oc-embedding-service/pom.xml oc-embedding-service/
 
 # Download maven dependencies first (saves time on rebuilds if code changes but dependencies do not)
-RUN mvn dependency:go-offline -B -DexcludeArtifactIds=oc-core,oc-filesystem-repository-connector,oc-vector-output-connector,oc-admin-ui,oc-runtime,oc-embedding-service
+RUN mvn dependency:go-offline -B -DexcludeArtifactIds=oc-core,oc-filesystem-repository-connector,oc-alfresco-repository-connector,oc-vector-output-connector,oc-admin-ui,oc-runtime,oc-embedding-service
 
 # Copy all source files
 COPY oc-core/src/ /app/oc-core/src/
 COPY oc-filesystem-repository-connector/src/ /app/oc-filesystem-repository-connector/src/
+COPY oc-alfresco-repository-connector/src/ /app/oc-alfresco-repository-connector/src/
 COPY oc-vector-output-connector/src/ /app/oc-vector-output-connector/src/
 COPY oc-embedding-service/src/ /app/oc-embedding-service/src/
 

@@ -28,6 +28,10 @@ import org.opencrawling.core.messaging.IngestionMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.FileOutputStream;
 import java.util.concurrent.StructuredTaskScope;
 import java.util.List;
 import java.util.ArrayList;
@@ -81,9 +85,35 @@ public class JobOrchestrator {
                 repositoryConnector.scan(path)
                     .flatMap(doc -> {
                         try {
+                            String finalUri = doc.uri();
+                            if (finalUri != null && !finalUri.startsWith("file:")) {
+                                // Save stream to shared claims directory (Claim Check Pattern)
+                                String sharedDir = resolveSharedDir();
+                                File claimsDir = new File(sharedDir, "claims");
+                                if (!claimsDir.exists()) {
+                                    claimsDir.mkdirs();
+                                }
+                                String filename = doc.id() + "_" + doc.metadata().getOrDefault("name", List.of("document")).get(0);
+                                filename = filename.replaceAll("[^a-zA-Z0-9.-]", "_");
+                                File claimFile = new File(claimsDir, filename);
+                                
+                                try (InputStream in = doc.contentStream();
+                                     OutputStream out = new FileOutputStream(claimFile)) {
+                                    if (in != null) {
+                                        in.transferTo(out);
+                                        finalUri = claimFile.toURI().toString();
+                                        log.info("Saved Alfresco document content to Claim Check file: {}", finalUri);
+                                    } else {
+                                        log.warn("Document content stream is null for id: {}", doc.id());
+                                    }
+                                } catch (Exception e) {
+                                    log.error("Failed to write Claim Check file for doc: {}", doc.id(), e);
+                                }
+                            }
+
                             IngestionMessage msg = new IngestionMessage(
                                 doc.id(),
-                                doc.uri(),
+                                finalUri,
                                 doc.metadata(),
                                 doc.acl(),
                                 doc.security(),
@@ -119,5 +149,17 @@ public class JobOrchestrator {
         } catch (Exception e) {
             log.error("Job execution failed: ", e);
         }
+    }
+
+    private String resolveSharedDir() {
+        File dockerData = new File("/data");
+        if (dockerData.exists() && dockerData.isDirectory() && dockerData.canWrite()) {
+            return "/data";
+        }
+        File localData = new File("data");
+        if (!localData.exists()) {
+            localData.mkdirs();
+        }
+        return localData.getAbsolutePath();
     }
 }

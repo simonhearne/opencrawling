@@ -27,11 +27,13 @@ import java.util.concurrent.StructuredTaskScope;
 
 import org.opencrawling.core.connector.RepositoryConnector;
 import org.opencrawling.core.document.RepositoryDocument;
+import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
 import reactor.core.publisher.Flux;
 
 @Component
+@Primary
 public class FileSystemRepositoryConnector implements RepositoryConnector {
 
     @Override

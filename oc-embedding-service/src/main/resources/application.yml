@@ -3,6 +3,8 @@ spring:
     name: oc-embedding-service
 
   ai:
+    openai:
+      api-key: placeholder
     ollama:
       base-url: http://127.0.0.1:11434
       embedding:
@@ -23,4 +25,4 @@ spring:
         spring.json.trusted.packages: "org.opencrawling.core.messaging"
 
 server:
-  port: 8082
+  port: 8085

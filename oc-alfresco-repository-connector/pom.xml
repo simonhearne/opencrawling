@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-
     Copyright © ${year} the original author or authors (piergiorgio@apache.org)
 
     Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,7 +13,6 @@
     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     See the License for the specific language governing permissions and
     limitations under the License.
-
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -26,10 +24,10 @@
         <version>1.0.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>oc-vector-output-connector</artifactId>
+    <artifactId>oc-alfresco-repository-connector</artifactId>
     <packaging>jar</packaging>
 
-    <name>OpenCrawling - Vector Output Connector</name>
+    <name>OpenCrawling - Alfresco Connector</name>
 
     <dependencies>
         <dependency>
@@ -37,30 +35,28 @@
             <artifactId>oc-core</artifactId>
             <version>${project.version}</version>
         </dependency>
+        
+        <!-- JSON parser (like Jackson, which is standard in Spring Boot) -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        
+        <!-- Testing dependencies -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-jpa</artifactId>
-        </dependency>
-        <!-- In 2.0.0-M6, spring-ai-core was renamed/split into spring-ai-model -->
-        <dependency>
-            <groupId>org.springframework.ai</groupId>
-            <artifactId>spring-ai-model</artifactId>
-            <version>${spring-ai.version}</version>
-        </dependency>
-        <!-- New Artifact Name for PGVector Store Starter in 2.0.0-M6 -->
-        <dependency>
-            <groupId>org.springframework.ai</groupId>
-            <artifactId>spring-ai-starter-vector-store-pgvector</artifactId>
-            <version>${spring-ai.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.tika</groupId>
-            <artifactId>tika-core</artifactId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.apache.tika</groupId>
-            <artifactId>tika-parsers-standard-package</artifactId>
+            <groupId>io.projectreactor</groupId>
+            <artifactId>reactor-test</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+        </plugins>
+    </build>
 </project>
