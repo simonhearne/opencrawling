@@ -53,7 +53,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v6.2.0
         with:
-          images: ${{ env.REGISTRY }}/${{ steps.repo-owner.outputs.owner }}/opencrawling-${{ matrix.component }}
+          images: ${{ env.REGISTRY }}/${{ steps.repo-owner.outputs.owner }}/oc-${{ matrix.component }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr

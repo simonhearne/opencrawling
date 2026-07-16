@@ -49,7 +49,7 @@ jobs:
         id: meta-backend
         uses: docker/metadata-action@v6.2.0
         with:
-          images: ${{ env.REGISTRY }}/${{ steps.repo-owner.outputs.owner }}/opencrawling-backend
+          images: ${{ env.REGISTRY }}/${{ steps.repo-owner.outputs.owner }}/oc-mcp-server
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -75,7 +75,7 @@ jobs:
         id: meta-frontend
         uses: docker/metadata-action@v6.2.0
         with:
-          images: ${{ env.REGISTRY }}/${{ steps.repo-owner.outputs.owner }}/opencrawling-frontend
+          images: ${{ env.REGISTRY }}/${{ steps.repo-owner.outputs.owner }}/oc-admin-ui
           tags: |
             type=ref,event=branch
             type=ref,event=pr

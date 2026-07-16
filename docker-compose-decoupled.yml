@@ -109,7 +109,7 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.crawler
-    image: opencrawling-crawler:latest
+    image: ghcr.io/opencrawling/oc-crawler:latest
     container_name: oc-crawler-service
     environment:
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9094
@@ -132,7 +132,7 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.ingestion-consumer
-    image: opencrawling-ingestion-consumer:latest
+    image: ghcr.io/opencrawling/oc-ingestion-consumer:latest
     container_name: oc-ingestion-consumer-service
     environment:
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9094
@@ -152,7 +152,7 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.embedding-consumer
-    image: opencrawling-embedding-consumer:latest
+    image: ghcr.io/opencrawling/oc-embedding-consumer:latest
     container_name: oc-embedding-consumer-service
     ports:
       - "8082:8082"
@@ -175,7 +175,7 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.writer-consumer
-    image: opencrawling-writer-consumer:latest
+    image: ghcr.io/opencrawling/oc-writer-consumer:latest
     container_name: oc-writer-service
     environment:
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9094
@@ -193,7 +193,7 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.mcp-server
-    image: opencrawling-mcp-server:latest
+    image: ghcr.io/opencrawling/oc-mcp-server:latest
     container_name: oc-mcp-server-service
     ports:
       - "8080:8080"
@@ -217,7 +217,7 @@ services:
     build:
       context: ./oc-admin-ui
       dockerfile: Dockerfile
-    image: opencrawling-frontend:latest
+    image: ghcr.io/opencrawling/oc-admin-ui:latest
     container_name: oc-admin-ui-service
     ports:
       - "3000:80"
