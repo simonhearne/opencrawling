@@ -3,18 +3,19 @@
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg?style=flat)](LICENSE)
 [![Java Version](https://img.shields.io/badge/Java-25-orange.svg?style=flat&logo=openjdk&logoColor=white)](https://jdk.java.net/25/)
 [![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.1+-green.svg?style=flat&logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
+[![Spring AI](https://img.shields.io/badge/Spring_AI-1.0+-6DB33F.svg?style=flat&logo=spring&logoColor=white)](https://spring.io/projects/spring-ai)
 [![Docker](https://img.shields.io/badge/Docker-Supported-blue.svg?style=flat&logo=docker&logoColor=white)](https://www.docker.com/)
 [![Apache Kafka](https://img.shields.io/badge/Apache_Kafka-Supported-black.svg?style=flat&logo=apachekafka&logoColor=white)](https://kafka.apache.org/)
 [![Apache Iceberg](https://img.shields.io/badge/Apache_Iceberg-1.11.0-3a6bc8.svg?style=flat&logo=apache&logoColor=white)](https://iceberg.apache.org/)
+[![Apache Tika](https://img.shields.io/badge/Apache_Tika-3.x-007396.svg?style=flat&logo=apache&logoColor=white)](https://tika.apache.org/)
+[![Alfresco](https://img.shields.io/badge/Alfresco_Content_Services-Supported-0090DF.svg?style=flat&logo=alfresco&logoColor=white)](https://www.alfresco.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17+-blue.svg?style=flat&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Milvus](https://img.shields.io/badge/Milvus-2.4.5-00A1EA.svg?style=flat&logo=milvus&logoColor=white)](https://milvus.io/)
 [![Redis](https://img.shields.io/badge/Redis-Supported-red.svg?style=flat&logo=redis&logoColor=white)](https://redis.io/)
 [![Ollama](https://img.shields.io/badge/Ollama-0.23.4-white.svg?style=flat&logo=ollama&logoColor=black)](https://ollama.com/)
-[![GitHub Stars](https://img.shields.io/github/stars/OpenPj/spring-manifold-next-gen.svg?style=flat&logo=github)](https://github.com/OpenPj/spring-manifold-next-gen/stargazers)
-[![GitHub Issues](https://img.shields.io/github/issues/OpenPj/spring-manifold-next-gen.svg?style=flat&logo=github)](https://github.com/OpenPj/spring-manifold-next-gen/issues)
-[![GitHub PRs](https://img.shields.io/github/issues-pr/OpenPj/spring-manifold-next-gen.svg?style=flat&logo=github)](https://github.com/OpenPj/spring-manifold-next-gen/pulls)
+[![MCP](https://img.shields.io/badge/MCP-Model_Context_Protocol-8A2BE2.svg?style=flat&logo=anthropic&logoColor=white)](https://modelcontextprotocol.io/)
 
-
-**OpenCrawling** is an enterprise data integration and ingestion platform modeled after Apache ManifoldCF. It leverages modern Java 25 features (such as Structured Concurrency and Virtual Threads), Spring Boot, and vector search infrastructure to orchestrate data flows from various repository connectors to vector search outputs.
+**OpenCrawling** is an enterprise data integration and ingestion platform. It leverages modern Java 25 features (such as Structured Concurrency and Virtual Threads), Spring Boot, and vector search infrastructure to orchestrate data flows from various repository connectors to vector search outputs.
 
 <p align="center">
   <img src="https://github.com/opencrawling/.github/raw/main/profile/images/logo.png" alt="OpenCrawling Logo" width="200" />
