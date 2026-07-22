@@ -32,8 +32,11 @@ import org.springframework.stereotype.Component;
 import java.util.*;
 
 @Component
-@ConditionalOnProperty(name = "spring.opencrawling.output.type", havingValue = "milvus")
-@ConditionalOnExpression("'${opencrawling.consumer.writer.enabled:false}' == 'true'")
+// Mirrors VectorStoreWriterConsumer (pgvector): enabled by default so a single-process
+// deployment writes with no extra config, and decoupled non-writer services opt out with
+// opencrawling.consumer.writer.enabled=false. Only active when the Milvus output is selected.
+@ConditionalOnProperty(name = "opencrawling.consumer.writer.enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnExpression("'${spring.opencrawling.output.type:pgvector}' == 'milvus'")
 public class MilvusStoreWriterConsumer {
 
     private static final Logger log = LoggerFactory.getLogger(MilvusStoreWriterConsumer.class);
