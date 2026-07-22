@@ -15,6 +15,7 @@
 [![Alfresco](https://img.shields.io/badge/Alfresco_Content_Services-Supported-0090DF.svg?style=flat&logo=alfresco&logoColor=white)](https://www.alfresco.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17+-blue.svg?style=flat&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Milvus](https://img.shields.io/badge/Milvus-2.4.5-00A1EA.svg?style=flat&logo=milvus&logoColor=white)](https://milvus.io/)
+[![OpenSearch](https://img.shields.io/badge/OpenSearch-2.x%20%7C%203.x-005EB8.svg?style=flat&logo=opensearch&logoColor=white)](https://opensearch.org/)
 [![Redis](https://img.shields.io/badge/Redis-Supported-red.svg?style=flat&logo=redis&logoColor=white)](https://redis.io/)
 [![Ollama](https://img.shields.io/badge/Ollama-0.23.4-white.svg?style=flat&logo=ollama&logoColor=black)](https://ollama.com/)
 [![OIS](https://img.shields.io/badge/OIS-Open_Ingestion_Standard-0052CC.svg?style=flat)](https://github.com/opencrawling/open-ingestion-standard)
