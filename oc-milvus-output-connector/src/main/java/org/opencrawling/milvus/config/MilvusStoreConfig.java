@@ -23,6 +23,7 @@ import io.milvus.v2.service.collection.request.AddFieldReq;
 import io.milvus.v2.service.collection.request.CreateCollectionReq;
 import io.milvus.v2.service.collection.request.DescribeCollectionReq;
 import io.milvus.v2.service.collection.request.HasCollectionReq;
+import org.opencrawling.milvus.MilvusConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -90,7 +91,7 @@ public class MilvusStoreConfig {
 
             // Primary key ID
             schema.addField(AddFieldReq.builder()
-                    .fieldName("id")
+                    .fieldName(MilvusConstants.FIELD_ID)
                     .dataType(DataType.VarChar)
                     .maxLength(256)
                     .isPrimaryKey(true)
@@ -106,41 +107,41 @@ public class MilvusStoreConfig {
 
             // Text field
             schema.addField(AddFieldReq.builder()
-                    .fieldName("text")
+                    .fieldName(MilvusConstants.FIELD_TEXT)
                     .dataType(DataType.VarChar)
                     .maxLength(65535)
                     .build());
 
             // URI field
             schema.addField(AddFieldReq.builder()
-                    .fieldName("uri")
+                    .fieldName(MilvusConstants.FIELD_URI)
                     .dataType(DataType.VarChar)
                     .maxLength(2048)
                     .build());
 
             // ACL / raw security field
             schema.addField(AddFieldReq.builder()
-                    .fieldName("acl")
+                    .fieldName(MilvusConstants.FIELD_ACL)
                     .dataType(DataType.VarChar)
                     .maxLength(4096)
                     .build());
 
             // Last modified field
             schema.addField(AddFieldReq.builder()
-                    .fieldName("lastModified")
+                    .fieldName(MilvusConstants.FIELD_LAST_MODIFIED)
                     .dataType(DataType.VarChar)
                     .maxLength(128)
                     .build());
 
             // Zero-Trust security: inheritanceEnabled
             schema.addField(AddFieldReq.builder()
-                    .fieldName("security_inheritance")
+                    .fieldName(MilvusConstants.FIELD_SECURITY_INHERITANCE)
                     .dataType(DataType.Bool)
                     .build());
 
             // Zero-Trust security: security_allowed_read Array
             schema.addField(AddFieldReq.builder()
-                    .fieldName("security_allowed_read")
+                    .fieldName(MilvusConstants.FIELD_SECURITY_ALLOWED_READ)
                     .dataType(DataType.Array)
                     .elementType(DataType.VarChar)
                     .maxLength(256)
@@ -149,7 +150,7 @@ public class MilvusStoreConfig {
 
             // Zero-Trust security: security_denied_read Array
             schema.addField(AddFieldReq.builder()
-                    .fieldName("security_denied_read")
+                    .fieldName(MilvusConstants.FIELD_SECURITY_DENIED_READ)
                     .dataType(DataType.Array)
                     .elementType(DataType.VarChar)
                     .maxLength(256)

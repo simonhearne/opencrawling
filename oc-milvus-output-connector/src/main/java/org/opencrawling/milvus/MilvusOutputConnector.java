@@ -153,9 +153,9 @@ public class MilvusOutputConnector implements OutputConnector {
                         metadata.put(key, cleanedList);
                     }
                 });
-                metadata.put("uri", document.uri());
-                metadata.put("acl", document.acl());
-                metadata.put("lastModified", document.lastModified().toString());
+                metadata.put(MilvusConstants.FIELD_URI, document.uri());
+                metadata.put(MilvusConstants.FIELD_ACL, document.acl());
+                metadata.put(MilvusConstants.FIELD_LAST_MODIFIED, document.lastModified().toString());
 
                 // Construct Spring AI Document for chunking
                 Document aiDoc = new Document(document.id(), text, metadata);
@@ -198,19 +198,21 @@ public class MilvusOutputConnector implements OutputConnector {
                     }
 
                     JsonObject row = new JsonObject();
-                    row.addProperty("id", chunkId);
-                    row.add("text", gson.toJsonTree(chunk.getText()));
-                    row.add("uri", gson.toJsonTree(document.uri()));
-                    row.add("acl", gson.toJsonTree(document.acl()));
-                    row.addProperty("lastModified", document.lastModified().toString());
-                    row.addProperty("security_inheritance", inheritanceEnabled);
-                    row.add("security_allowed_read", gson.toJsonTree(allowedRead));
-                    row.add("security_denied_read", gson.toJsonTree(deniedRead));
+                    row.addProperty(MilvusConstants.FIELD_ID, chunkId);
+                    row.addProperty(MilvusConstants.FIELD_TEXT, chunk.getText());
+                    row.addProperty(MilvusConstants.FIELD_URI, document.uri());
+                    row.addProperty(MilvusConstants.FIELD_ACL, document.acl());
+                    row.addProperty(MilvusConstants.FIELD_LAST_MODIFIED, document.lastModified().toString());
+                    row.addProperty(MilvusConstants.FIELD_SECURITY_INHERITANCE, inheritanceEnabled);
+                    row.add(MilvusConstants.FIELD_SECURITY_ALLOWED_READ, gson.toJsonTree(allowedRead));
+                    row.add(MilvusConstants.FIELD_SECURITY_DENIED_READ, gson.toJsonTree(deniedRead));
                     row.add(vectorFieldName, gson.toJsonTree(embedding));
 
                     // Add other dynamic metadata properties to row
                     metadata.forEach((key, val) -> {
-                        if (!"uri".equals(key) && !"acl".equals(key) && !"lastModified".equals(key)) {
+                        if (!MilvusConstants.FIELD_URI.equals(key) &&
+                            !MilvusConstants.FIELD_ACL.equals(key) &&
+                            !MilvusConstants.FIELD_LAST_MODIFIED.equals(key)) {
                             row.add(key, gson.toJsonTree(val));
                         }
                     });

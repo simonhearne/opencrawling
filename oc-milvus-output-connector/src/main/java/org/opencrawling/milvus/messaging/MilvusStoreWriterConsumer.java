@@ -20,6 +20,7 @@ import com.google.gson.JsonObject;
 import io.milvus.v2.client.MilvusClientV2;
 import io.milvus.v2.service.vector.request.InsertReq;
 import org.opencrawling.core.messaging.DocumentEmbeddedMessage;
+import org.opencrawling.milvus.MilvusConstants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -101,19 +102,29 @@ public class MilvusStoreWriterConsumer {
             }
 
             JsonObject row = new JsonObject();
-            row.addProperty("id", message.chunkId());
-            row.add("text", gson.toJsonTree(message.text()));
-            row.add("uri", gson.toJsonTree(message.metadata().getOrDefault("uri", "")));
-            row.add("acl", gson.toJsonTree(message.metadata().getOrDefault("acl", "")));
-            row.add("lastModified", gson.toJsonTree(message.metadata().getOrDefault("lastModified", "")));
-            row.addProperty("security_inheritance", inheritanceEnabled);
-            row.add("security_allowed_read", gson.toJsonTree(allowedRead));
-            row.add("security_denied_read", gson.toJsonTree(deniedRead));
+            row.addProperty(MilvusConstants.FIELD_ID, message.chunkId());
+            row.addProperty(MilvusConstants.FIELD_TEXT, message.text());
+
+            Object uriVal = message.metadata().get(MilvusConstants.FIELD_URI);
+            row.addProperty(MilvusConstants.FIELD_URI, uriVal != null ? String.valueOf(uriVal) : "");
+
+            Object aclVal = message.metadata().get(MilvusConstants.FIELD_ACL);
+            row.addProperty(MilvusConstants.FIELD_ACL, aclVal != null ? String.valueOf(aclVal) : "");
+
+            Object lastModifiedVal = message.metadata().get(MilvusConstants.FIELD_LAST_MODIFIED);
+            row.addProperty(MilvusConstants.FIELD_LAST_MODIFIED, lastModifiedVal != null ? String.valueOf(lastModifiedVal) : "");
+
+            row.addProperty(MilvusConstants.FIELD_SECURITY_INHERITANCE, inheritanceEnabled);
+            row.add(MilvusConstants.FIELD_SECURITY_ALLOWED_READ, gson.toJsonTree(allowedRead));
+            row.add(MilvusConstants.FIELD_SECURITY_DENIED_READ, gson.toJsonTree(deniedRead));
             row.add(vectorFieldName, gson.toJsonTree(message.embedding()));
 
             // Put other dynamic metadata properties to row
             message.metadata().forEach((key, val) -> {
-                if (!"uri".equals(key) && !"acl".equals(key) && !"lastModified".equals(key) && !"security".equals(key)) {
+                if (!MilvusConstants.FIELD_URI.equals(key) &&
+                    !MilvusConstants.FIELD_ACL.equals(key) &&
+                    !MilvusConstants.FIELD_LAST_MODIFIED.equals(key) &&
+                    !"security".equals(key)) {
                     row.add(key, gson.toJsonTree(val));
                 }
             });

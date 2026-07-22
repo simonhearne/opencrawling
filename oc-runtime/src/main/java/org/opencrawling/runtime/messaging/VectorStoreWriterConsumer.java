@@ -20,6 +20,7 @@ import org.springframework.ai.vectorstore.pgvector.PgVectorStore;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.opencrawling.runtime.config.KafkaConfig;
 import org.opencrawling.core.messaging.DocumentEmbeddedMessage;
 import org.opencrawling.runtime.observability.TelemetryTraceStore;
@@ -34,6 +35,7 @@ import java.util.UUID;
 
 @Component
 @ConditionalOnProperty(name = "opencrawling.consumer.writer.enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnExpression("'${spring.opencrawling.output.type:pgvector}' == 'pgvector'")
 public class VectorStoreWriterConsumer {
 
     private static final Logger log = LoggerFactory.getLogger(VectorStoreWriterConsumer.class);

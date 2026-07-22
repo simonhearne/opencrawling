@@ -173,9 +173,14 @@ class MilvusOutputConnectorIT {
         SearchReq searchPublic = SearchReq.builder()
                 .collectionName("it_kb")
                 .data(Collections.singletonList(new FloatVec(Arrays.asList(0.1f, 0.2f, 0.3f, 0.4f))))
-                .filter("ARRAY_CONTAINS(security_allowed_read, 'public')")
+                .filter("ARRAY_CONTAINS(" + MilvusConstants.FIELD_SECURITY_ALLOWED_READ + ", 'public')")
                 .topK(10)
-                .outputFields(Arrays.asList("id", "text", "uri", "security_allowed_read"))
+                .outputFields(Arrays.asList(
+                        MilvusConstants.FIELD_ID,
+                        MilvusConstants.FIELD_TEXT,
+                        MilvusConstants.FIELD_URI,
+                        MilvusConstants.FIELD_SECURITY_ALLOWED_READ
+                ))
                 .build();
 
         List<List<SearchResp.SearchResult>> resultsPublic = List.of();
@@ -190,21 +195,25 @@ class MilvusOutputConnectorIT {
 
         assertThat(resultsPublic).isNotEmpty();
         assertThat(resultsPublic.get(0)).isNotEmpty();
-        assertThat(resultsPublic.get(0).get(0).getEntity().get("id").toString()).contains("doc-public");
+        assertThat(resultsPublic.get(0).get(0).getEntity().get(MilvusConstants.FIELD_ID).toString()).contains("doc-public");
 
         // Perform search mimicking HR user ("hr-group")
         SearchReq searchHr = SearchReq.builder()
                 .collectionName("it_kb")
                 .data(Collections.singletonList(new FloatVec(Arrays.asList(0.1f, 0.2f, 0.3f, 0.4f))))
-                .filter("ARRAY_CONTAINS(security_allowed_read, 'hr-group')")
+                .filter("ARRAY_CONTAINS(" + MilvusConstants.FIELD_SECURITY_ALLOWED_READ + ", 'hr-group')")
                 .topK(10)
-                .outputFields(Arrays.asList("id", "text", "security_allowed_read"))
+                .outputFields(Arrays.asList(
+                        MilvusConstants.FIELD_ID,
+                        MilvusConstants.FIELD_TEXT,
+                        MilvusConstants.FIELD_SECURITY_ALLOWED_READ
+                ))
                 .build();
 
         SearchResp respHr = milvusClient.search(searchHr);
         List<List<SearchResp.SearchResult>> resultsHr = respHr.getSearchResults();
         assertThat(resultsHr).isNotEmpty();
         assertThat(resultsHr.get(0)).isNotEmpty();
-        assertThat(resultsHr.get(0).get(0).getEntity().get("id").toString()).contains("doc-restricted");
+        assertThat(resultsHr.get(0).get(0).getEntity().get(MilvusConstants.FIELD_ID).toString()).contains("doc-restricted");
     }
 }

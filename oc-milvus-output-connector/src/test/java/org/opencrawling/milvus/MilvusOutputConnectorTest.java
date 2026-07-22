@@ -103,8 +103,8 @@ class MilvusOutputConnectorTest {
 
         Object dataRow = capturedReq.getData().get(0);
         assertThat(dataRow.toString()).contains("doc-123");
-        assertThat(dataRow.toString()).contains("security_allowed_read");
-        assertThat(dataRow.toString()).contains("security_denied_read");
-        assertThat(dataRow.toString()).contains("security_inheritance");
+        assertThat(dataRow.toString()).contains(MilvusConstants.FIELD_SECURITY_ALLOWED_READ);
+        assertThat(dataRow.toString()).contains(MilvusConstants.FIELD_SECURITY_DENIED_READ);
+        assertThat(dataRow.toString()).contains(MilvusConstants.FIELD_SECURITY_INHERITANCE);
     }
 }
