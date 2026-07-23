@@ -175,11 +175,11 @@ public class AlfrescoRepositoryConnector implements RepositoryConnector {
                     boolean isFile = entry.path("isFile").asBoolean(false);
                     
                     if (isFolder) {
-                        scope.fork(() -> {
+                        scope.fork(org.opencrawling.observability.concurrency.ObservabilityTask.observed(() -> {
                             // After resolving the path down, we use the absolute child Node ID, so relativePath is null
                             scanFolder(childId, null, sink);
                             return null;
-                        });
+                        }));
                     } else if (isFile) {
                         try {
                             RepositoryDocument doc = createDocument(entry);

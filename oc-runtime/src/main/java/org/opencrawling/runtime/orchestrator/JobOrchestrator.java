@@ -100,7 +100,7 @@ public class JobOrchestrator {
 
         try (var scope = StructuredTaskScope.open()) {
             
-            StructuredTaskScope.Subtask<List<ScanResult>> scanTask = scope.fork(() -> {
+            StructuredTaskScope.Subtask<List<ScanResult>> scanTask = scope.fork(org.opencrawling.observability.concurrency.ObservabilityTask.observed(() -> {
                 List<ScanResult> results = new ArrayList<>();
                 repositoryConnector.scan(path)
                     .flatMap(doc -> {
@@ -158,7 +158,7 @@ public class JobOrchestrator {
                     .doOnNext(results::add)
                     .blockLast(); 
                 return results;
-            });
+            }));
             
             scope.join();
             

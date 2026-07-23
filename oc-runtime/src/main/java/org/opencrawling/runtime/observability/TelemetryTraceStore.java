@@ -16,6 +16,9 @@
 package org.opencrawling.runtime.observability;
 
 import org.springframework.stereotype.Component;
+import io.opentelemetry.sdk.common.CompletableResultCode;
+import io.opentelemetry.sdk.trace.data.SpanData;
+import io.opentelemetry.sdk.trace.export.SpanExporter;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -26,7 +29,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * Captures correlated pipeline spans, performance metrics, and error logs by jobId.
  */
 @Component
-public class TelemetryTraceStore {
+public class TelemetryTraceStore implements SpanExporter {
 
     public record SpanRecord(
             String spanId,
@@ -100,5 +103,51 @@ public class TelemetryTraceStore {
         return metrics.stream()
                 .filter(m -> m.connectorId() != null && m.connectorId().equalsIgnoreCase(connectorId))
                 .toList();
+    }
+
+    @Override
+    public CompletableResultCode export(Collection<SpanData> spans) {
+        for (SpanData span : spans) {
+            String spanId = span.getSpanContext().getSpanId();
+            String traceId = span.getSpanContext().getTraceId();
+            
+            Map<String, String> attrs = new HashMap<>();
+            span.getAttributes().forEach((key, value) -> attrs.put(key.getKey(), String.valueOf(value)));
+            
+            String jobId = attrs.getOrDefault("jobId", attrs.getOrDefault("job.id", "system"));
+            String stage = attrs.getOrDefault("pipeline.stage", span.getName());
+            String component = attrs.getOrDefault("component", span.getName());
+            
+            long startTimeMillis = java.util.concurrent.TimeUnit.NANOSECONDS.toMillis(span.getStartEpochNanos());
+            long durationMillis = java.util.concurrent.TimeUnit.NANOSECONDS.toMillis(span.getEndEpochNanos() - span.getStartEpochNanos());
+            
+            String status = span.getStatus().getStatusCode().name();
+            String errorMessage = span.getStatus().getDescription();
+            
+            SpanRecord record = new SpanRecord(
+                spanId,
+                traceId,
+                jobId,
+                stage,
+                component,
+                startTimeMillis,
+                durationMillis,
+                status,
+                errorMessage,
+                attrs
+            );
+            recordSpan(record);
+        }
+        return CompletableResultCode.ofSuccess();
+    }
+
+    @Override
+    public CompletableResultCode flush() {
+        return CompletableResultCode.ofSuccess();
+    }
+
+    @Override
+    public CompletableResultCode shutdown() {
+        return CompletableResultCode.ofSuccess();
     }
 }

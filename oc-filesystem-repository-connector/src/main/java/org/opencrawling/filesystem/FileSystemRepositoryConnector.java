@@ -62,16 +62,15 @@ public class FileSystemRepositoryConnector implements RepositoryConnector {
 
     @SuppressWarnings("preview")
 	private void scanDirectory(Path dir, reactor.core.publisher.FluxSink<RepositoryDocument> sink) throws InterruptedException {
-        // Java 25: StructuredTaskScope.open() defaults to "shutdown on failure" behavior
         try (var scope = StructuredTaskScope.open()) {
             
             try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir)) {
                 for (Path entry : stream) {
                     if (Files.isDirectory(entry)) {
-                        scope.fork(() -> {
+                        scope.fork(org.opencrawling.observability.concurrency.ObservabilityTask.observed(() -> {
                             scanDirectory(entry, sink);
                             return null;
-                        });
+                        }));
                     } else if (Files.isRegularFile(entry)) {
                         try {
                             RepositoryDocument doc = createDocument(entry);

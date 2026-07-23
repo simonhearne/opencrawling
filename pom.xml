@@ -88,6 +88,7 @@
 
     <modules>
         <module>oc-core</module>
+        <module>oc-observability</module>
         <module>oc-runtime</module>
         <module>oc-filesystem-repository-connector</module>
         <module>oc-alfresco-repository-connector</module>

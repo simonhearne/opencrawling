@@ -69,3 +69,18 @@ To avoid clogging Kafka partitions with megabytes of binary file data (PDFs, Exc
 2.  **Text Extraction & Chunking**: The `IngestionConsumer` reads the message, fetches the file from storage, extracts text using **Apache Tika**, splits it into semantic chunks, and publishes them to `opencrawling-chunks`.
 3.  **Embedding Generation**: The `oc-embedding-service` consumes chunks, generates embedding vectors, and pushes them to `opencrawling-embedded`.
 4.  **Vector Store Sync**: The `VectorStoreWriterConsumer` saves the vectors, metadata, and Security SIDs into the vector database.
+
+---
+
+## 📊 Distributed Tracing & Observability Architecture
+
+OpenCrawling implements end-to-end distributed tracing across all component and microservice boundaries to enable AIOps Root Cause Analysis:
+
+1.  **Connector & Virtual Thread Boundaries**:
+    Jobs run inside Java Virtual Threads for lightweight concurrency. Because virtual threads do not inherit trace context automatically under Java 25 Structured Concurrency guidelines (`StructuredTaskScope`), OpenCrawling encapsulates thread tasks within `ObservabilityTask.observed(task)`. This helper captures the parent OTel span context and restores it inside the virtual thread scope before child execution begins.
+2.  **Kafka Messaging Boundaries**:
+    Micrometer Observation features are enabled on Kafka listeners and templates. Trace context headers (e.g. `traceparent`) are automatically injected into Kafka records, ensuring traces span across the crawler, chunking consumer, embedding services, and vector store writer.
+3.  **OTel Collector Pipeline**:
+    Spans are exported to the OpenTelemetry Collector using the OTLP protocol. The collector splits and routes traces to Jaeger and exposes performance metrics to Prometheus.
+4.  **Real-Time Trace Interceptor**:
+    Spans are intercepted in real-time by a Spring-managed `TelemetryTraceStore` implementing `SpanExporter`. This bridge registers spans and errors in an in-memory repository to generate AI-assisted Root Cause Analysis (RCA) reports inside the Admin UI.

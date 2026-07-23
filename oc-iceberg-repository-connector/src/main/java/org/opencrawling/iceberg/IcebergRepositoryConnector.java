@@ -170,7 +170,7 @@ public class IcebergRepositoryConnector implements RepositoryConnector {
 
                     try (var scope = StructuredTaskScope.open()) {
                         for (FileScanTask task : tasks) {
-                            scope.fork(() -> {
+                            scope.fork(org.opencrawling.observability.concurrency.ObservabilityTask.observed(() -> {
                                 try (CloseableIterable<Record> reader = Parquet.read(table.io().newInputFile(task.file().path().toString()))
                                         .project(table.schema())
                                         .createReaderFunc(fileSchema -> GenericParquetReaders.buildReader(table.schema(), fileSchema))
@@ -183,7 +183,7 @@ public class IcebergRepositoryConnector implements RepositoryConnector {
                                     log.error("Error reading Iceberg records in virtual thread for task: {}", task, e);
                                 }
                                 return null;
-                            });
+                            }));
                         }
                         scope.join();
                     }

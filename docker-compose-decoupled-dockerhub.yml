@@ -1,5 +1,5 @@
 #
-# Copyright © ${year} the original author or authors (piergiorgio@apache.org)
+# Copyright © 2026 the original author or authors (piergiorgio@apache.org)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -107,7 +107,7 @@ services:
   # --- Apache Ozone Object Storage (Claim Check Store) ---
   ozone-scm:
     image: apache/ozone:2.2.0
-    container_name: ozone-scm
+    container_name: ozone-scm-decoupled
     hostname: scm
     environment:
       OZONE-SITE.XML_ozone.scm.client.address: scm
@@ -118,7 +118,7 @@ services:
 
   ozone-om:
     image: apache/ozone:2.2.0
-    container_name: ozone-om
+    container_name: ozone-om-decoupled
     hostname: om
     environment:
       OZONE-SITE.XML_ozone.scm.client.address: scm
@@ -131,7 +131,7 @@ services:
 
   ozone-datanode:
     image: apache/ozone:2.2.0
-    container_name: ozone-datanode
+    container_name: ozone-datanode-decoupled
     environment:
       OZONE-SITE.XML_ozone.scm.client.address: scm
       OZONE-SITE.XML_ozone.om.address: om
@@ -144,7 +144,7 @@ services:
 
   ozone-s3g:
     image: apache/ozone:2.2.0
-    container_name: ozone-s3g
+    container_name: ozone-s3g-decoupled
     hostname: s3g
     ports:
       - "9878:9878"
@@ -158,12 +158,9 @@ services:
     networks:
       - opencrawling-network
 
-  # --- Decoupled OpenCrawling Services ---
+  # --- Decoupled OpenCrawling Services (Docker Hub Release Distribution) ---
   oc-crawler:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.crawler
-    image: ghcr.io/opencrawling/oc-crawler:latest
+    image: opencrawling/oc-crawler:latest
     container_name: oc-crawler-service
     environment:
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9094
@@ -173,12 +170,6 @@ services:
       - SPRING_AI_VECTORSTORE_PGVECTOR_USERNAME=opencrawling
       - SPRING_AI_VECTORSTORE_PGVECTOR_PASSWORD=opencrawling_password
       - SPRING_MAIN_WEB_APPLICATION_TYPE=none
-      - SPRING_OPENCRAWLING_CLAIM_CHECK_STORE=${SPRING_OPENCRAWLING_CLAIM_CHECK_STORE:-local}
-      - SPRING_OPENCRAWLING_CLAIM_CHECK_OZONE_S3_ENDPOINT=http://s3g:9878
-      - OPENCRAWLING_CONSUMER_INGESTION_ENABLED=false
-      - OPENCRAWLING_CONSUMER_EMBEDDING_ENABLED=false
-      - OPENCRAWLING_CONSUMER_WRITER_ENABLED=false
-      - OPENCRAWLING_MCP_SERVER_ENABLED=false
       - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://otel-collector:4318/v1/traces
       - OPENCRAWLING_OBSERVABILITY_ENABLED=true
       - OPENCRAWLING_OBSERVABILITY_SAMPLING_PROBABILITY=1.0
@@ -189,21 +180,16 @@ services:
       - postgres
     networks:
       - opencrawling-network
-    restart: "no"
+    restart: on-failure
 
   oc-ingestion-consumer:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.ingestion-consumer
-    image: ghcr.io/opencrawling/oc-ingestion-consumer:latest
+    image: opencrawling/oc-ingestion-consumer:latest
     container_name: oc-ingestion-consumer-service
     environment:
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9094
       - SPRING_AI_VECTORSTORE_PGVECTOR_URL=jdbc:postgresql://postgres:5432/opencrawling
       - SPRING_AI_VECTORSTORE_PGVECTOR_USERNAME=opencrawling
       - SPRING_AI_VECTORSTORE_PGVECTOR_PASSWORD=opencrawling_password
-      - SPRING_OPENCRAWLING_CLAIM_CHECK_STORE=${SPRING_OPENCRAWLING_CLAIM_CHECK_STORE:-local}
-      - SPRING_OPENCRAWLING_CLAIM_CHECK_OZONE_S3_ENDPOINT=http://s3g:9878
       - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://otel-collector:4318/v1/traces
       - OPENCRAWLING_OBSERVABILITY_ENABLED=true
       - OPENCRAWLING_OBSERVABILITY_SAMPLING_PROBABILITY=1.0
@@ -217,10 +203,7 @@ services:
     restart: unless-stopped
 
   oc-embedding-consumer:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.embedding-consumer
-    image: ghcr.io/opencrawling/oc-embedding-consumer:latest
+    image: opencrawling/oc-embedding-consumer:latest
     container_name: oc-embedding-consumer-service
     ports:
       - "8082:8082"
@@ -243,10 +226,7 @@ services:
     restart: unless-stopped
 
   oc-writer-consumer:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.writer-consumer
-    image: ghcr.io/opencrawling/oc-writer-consumer:latest
+    image: opencrawling/oc-writer-consumer:latest
     container_name: oc-writer-service
     environment:
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9094
@@ -264,10 +244,7 @@ services:
     restart: unless-stopped
 
   oc-mcp-server:
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.mcp-server
-    image: ghcr.io/opencrawling/oc-mcp-server:latest
+    image: opencrawling/oc-mcp-server:latest
     container_name: oc-mcp-server-service
     ports:
       - "8080:8080"
@@ -291,10 +268,7 @@ services:
     restart: unless-stopped
 
   oc-admin-ui:
-    build:
-      context: ./oc-admin-ui
-      dockerfile: Dockerfile
-    image: ghcr.io/opencrawling/oc-admin-ui:latest
+    image: opencrawling/oc-admin-ui:latest
     container_name: oc-admin-ui-service
     ports:
       - "3000:80"

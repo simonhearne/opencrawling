@@ -85,6 +85,23 @@ spring:
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
         spring.json.trusted.packages: "org.opencrawling.core.messaging"
+    listener:
+      observation-enabled: ${OPENCRAWLING_OBSERVABILITY_ENABLED:true}
+    template:
+      observation-enabled: ${OPENCRAWLING_OBSERVABILITY_ENABLED:true}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  otlp:
+    tracing:
+      endpoint: ${OTEL_EXPORTER_OTLP_TRACES_ENDPOINT:http://localhost:4318/v1/traces}
+  tracing:
+    enabled: ${OPENCRAWLING_OBSERVABILITY_ENABLED:true}
+    sampling:
+      probability: ${OPENCRAWLING_OBSERVABILITY_SAMPLING_PROBABILITY:1.0}
 
 server:
   port: 8080

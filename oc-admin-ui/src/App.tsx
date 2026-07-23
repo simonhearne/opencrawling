@@ -176,7 +176,7 @@ export default function App() {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-8 custom-scrollbar">
           {activeView === 'dashboard' && <Dashboard />}
           {activeView === 'jobs' && <JobTable setActiveView={setActiveView} />}
           {activeView === 'connectors' && <ConnectorForm />}

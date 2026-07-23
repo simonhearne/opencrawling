@@ -173,6 +173,9 @@ services:
       - SPRING_AI_VECTORSTORE_PGVECTOR_USERNAME=opencrawling
       - SPRING_AI_VECTORSTORE_PGVECTOR_PASSWORD=opencrawling_password
       - SPRING_MAIN_WEB_APPLICATION_TYPE=none
+      - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://otel-collector:4318/v1/traces
+      - OPENCRAWLING_OBSERVABILITY_ENABLED=true
+      - OPENCRAWLING_OBSERVABILITY_SAMPLING_PROBABILITY=1.0
     volumes:
       - ./oc-runtime/data:/data  # Mount sample files directory
     depends_on:
@@ -193,6 +196,9 @@ services:
       - SPRING_AI_VECTORSTORE_PGVECTOR_URL=jdbc:postgresql://postgres:5432/opencrawling
       - SPRING_AI_VECTORSTORE_PGVECTOR_USERNAME=opencrawling
       - SPRING_AI_VECTORSTORE_PGVECTOR_PASSWORD=opencrawling_password
+      - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://otel-collector:4318/v1/traces
+      - OPENCRAWLING_OBSERVABILITY_ENABLED=true
+      - OPENCRAWLING_OBSERVABILITY_SAMPLING_PROBABILITY=1.0
     volumes:
       - ./oc-runtime/data:/data  # Needs access to resolve local claim check file URIs
     depends_on:
@@ -217,6 +223,9 @@ services:
       - SPRING_AI_VECTORSTORE_PGVECTOR_USERNAME=opencrawling
       - SPRING_AI_VECTORSTORE_PGVECTOR_PASSWORD=opencrawling_password
       - SPRING_AI_OPENAI_API_KEY=mock-key
+      - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://otel-collector:4318/v1/traces
+      - OPENCRAWLING_OBSERVABILITY_ENABLED=true
+      - OPENCRAWLING_OBSERVABILITY_SAMPLING_PROBABILITY=1.0
     depends_on:
       - kafka
       - ollama
@@ -236,6 +245,9 @@ services:
       - SPRING_AI_VECTORSTORE_PGVECTOR_URL=jdbc:postgresql://postgres:5432/opencrawling
       - SPRING_AI_VECTORSTORE_PGVECTOR_USERNAME=opencrawling
       - SPRING_AI_VECTORSTORE_PGVECTOR_PASSWORD=opencrawling_password
+      - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://otel-collector:4318/v1/traces
+      - OPENCRAWLING_OBSERVABILITY_ENABLED=true
+      - OPENCRAWLING_OBSERVABILITY_SAMPLING_PROBABILITY=1.0
     depends_on:
       - kafka
       - postgres
@@ -258,6 +270,9 @@ services:
       - SPRING_DATA_REDIS_HOST=redis
       - SPRING_DATA_REDIS_PASSWORD=redis_password
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9094
+      - OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=http://otel-collector:4318/v1/traces
+      - OPENCRAWLING_OBSERVABILITY_ENABLED=true
+      - OPENCRAWLING_OBSERVABILITY_SAMPLING_PROBABILITY=1.0
     depends_on:
       - postgres
       - redis
