@@ -236,6 +236,22 @@ To build and run the OpenCrawling backend runtime, the dynamic embedding microse
 
 ---
 
+### Option A.1.b: Run Pre-built Stack from Docker Hub
+
+To run the standard multi-tier application stack using pre-built images from Docker Hub (without building them from source):
+
+1. **Start backing services**:
+   ```bash
+   docker compose up -d
+   ```
+
+2. **Start application services**:
+   ```bash
+   docker compose -f docker-compose-apps-dockerhub.yml up -d
+   ```
+
+---
+
 ### Option A.2: Decoupled Multi-Service Deployment (Decoupled Microservices)
 
 To run each microservice component (Repository Crawler, Ingestion Consumer, Embedding Consumer, Vector Store Writer, Secure MCP Server, and Admin UI) as a completely separate containerized process communicating over Kafka:
@@ -255,7 +271,22 @@ This spins up the database/event-stream dependencies alongside five decoupled Op
 * **React Admin UI Console**: Access the administration dashboard at [http://localhost:3000](http://localhost:3000).
 * **Secure MCP Server**: Connect your AI Client / IDE directly to [http://localhost:8080](http://localhost:8080) over SSE.
 
-### Option A.3: Quick Start with Released Containers (Pre-built Release Distribution)
+---
+
+### Option A.2.b: Run Decoupled Stack from Docker Hub
+
+To run the complete decoupled pipeline using pre-built images published to Docker Hub:
+
+1. **Start the decoupled pipeline**:
+   ```bash
+   docker compose -f docker-compose-decoupled-dockerhub.yml up -d
+   ```
+
+This spins up the entire backing infrastructure (Postgres, Redis, Kafka, Ollama, OpenTelemetry stack) and all five decoupled OpenCrawling services instantly using Docker Hub images.
+
+---
+
+### Option A.3: Quick Start with Released Containers (Pre-built Release Distribution from GHCR)
 
 To run the complete decoupled pipeline using the official pre-built release containers from the GitHub Container Registry (without building the services locally):
 
