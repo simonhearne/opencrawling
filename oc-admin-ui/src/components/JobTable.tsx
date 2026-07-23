@@ -163,18 +163,29 @@ export default function JobTable({ setActiveView }: JobTableProps) {
   const [isDiagnoseOpen, setIsDiagnoseOpen] = useState(false)
   const [diagnoseReport, setDiagnoseReport] = useState<any>(null)
   const [isDiagnosing, setIsDiagnosing] = useState(false)
+  const [activeTab, setActiveTab] = useState<'ai' | 'traces' | 'errors'>('ai')
+  const [traceData, setTraceData] = useState<any>(null)
+  const [errorData, setErrorData] = useState<any[]>([])
+  const [selectedSpan, setSelectedSpan] = useState<any>(null)
 
   const handleDiagnoseJob = async (job: Job) => {
     setIsDiagnosing(true)
     setIsDiagnoseOpen(true)
     setDiagnoseReport(null)
+    setTraceData(null)
+    setErrorData([])
+    setSelectedSpan(null)
+    setActiveTab('ai')
     try {
-      const res = await observabilityApi.diagnoseJob(job.id)
-      if (res.data) {
-        setDiagnoseReport(res.data)
-      } else {
-        throw new Error("No data returned from backend")
-      }
+      const [resDiag, resTraces, resErrors] = await Promise.all([
+        observabilityApi.diagnoseJob(job.id),
+        observabilityApi.getJobTraces(job.id),
+        observabilityApi.getErrorLogs(job.id)
+      ])
+      
+      if (resDiag.data) setDiagnoseReport(resDiag.data)
+      if (resTraces.data) setTraceData(resTraces.data)
+      if (resErrors.data?.errors) setErrorData(resErrors.data.errors)
     } catch (err) {
       console.warn("API call to observability service failed, generating local diagnostic report:", err)
       
@@ -230,6 +241,36 @@ export default function JobTable({ setActiveView }: JobTableProps) {
           : [`Pipeline operating at optimal throughput for ${repoName} → ${outName} flow.`],
         errorLogs: []
       })
+
+      // Generate local mock traces matching the config
+      const traceId = Math.random().toString(16).substring(2, 10)
+      const now = Date.now()
+      setTraceData({
+        jobId: job.id,
+        totalSpans: 5,
+        totalDurationMillis: totalMs,
+        overallStatus: isFailed ? 'FAILED' : 'COMPLETED',
+        spans: [
+          { spanId: 'span-1', traceId, jobId: job.id, stage: 'Scanning', component: repoName, startTimeMillis: now - 5000, durationMillis: scanMs, status: 'SUCCESS', attributes: { path: job.path, host: 'opencrawling-crawler' } },
+          { spanId: 'span-2', traceId, jobId: job.id, stage: 'Extracting', component: 'TikaExtractor', startTimeMillis: now - 4500, durationMillis: extractMs, status: 'SUCCESS', attributes: { length: '4820', mimeType: 'text/plain' } },
+          { spanId: 'span-3', traceId, jobId: job.id, stage: 'Chunking', component: 'TokenTextSplitter', startTimeMillis: now - 3500, durationMillis: chunkMs, status: 'SUCCESS', attributes: { chunkCount: '6', chunkSize: '1000' } },
+          { spanId: 'span-4', traceId, jobId: job.id, stage: 'Embedding', component: 'EmbeddingConsumer', startTimeMillis: now - 3000, durationMillis: embedMs, status: isFailed ? 'ERROR' : 'SUCCESS', errorMessage: isFailed ? 'Read timeout from embedding client' : null, attributes: { model: transformName, engine: 'ollama' } },
+          { spanId: 'span-5', traceId, jobId: job.id, stage: 'Indexing', component: 'VectorStoreWriterConsumer', startTimeMillis: now - 1000, durationMillis: indexMs, status: isFailed ? 'UNEXECUTED' : 'SUCCESS', attributes: { db: outName, pgVectorTableName: 'vector_store' } }
+        ]
+      })
+
+      if (isFailed) {
+        setErrorData([
+          {
+            jobId: job.id,
+            timestamp: new Date().toISOString(),
+            level: 'ERROR',
+            component: 'EmbeddingConsumer',
+            message: 'Read timeout from embedding client: Connection pool shut down or host unreachable.',
+            stackTrace: 'java.net.http.HttpConnectTimeoutException: HTTP connect timed out after 30000ms\n\tat java.net.http/HttpClient.send(HttpClient.java:567)\n\tat org.opencrawling.embedding.OllamaEmbeddingConnector.embed(OllamaEmbeddingConnector.java:124)\n\tat org.opencrawling.runtime.messaging.EmbeddingConsumer.consume(EmbeddingConsumer.java:78)'
+          }
+        ])
+      }
     } finally {
       setIsDiagnosing(false)
     }
@@ -499,29 +540,27 @@ export default function JobTable({ setActiveView }: JobTableProps) {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto w-full">
           <table className="w-full text-left">
             <thead>
-              <tr className="bg-slate-900/50 border-b border-border text-xs uppercase tracking-wider text-muted">
-                <th className="px-6 py-4 font-semibold">Job Details</th>
-                <th className="px-6 py-4 font-semibold">Pipeline Flow</th>
-                <th className="px-6 py-4 font-semibold">Scan Path</th>
-                <th className="px-6 py-4 font-semibold">Status</th>
-                <th className="px-6 py-4 font-semibold text-right">Documents</th>
-                <th className="px-6 py-4 font-semibold">Last Run</th>
-                <th className="px-6 py-4 font-semibold text-center">Actions</th>
+              <tr className="bg-slate-900/50 border-b border-border text-[10px] sm:text-xs uppercase tracking-wider text-muted">
+                <th className="px-3 sm:px-6 py-4 font-semibold">Job Details</th>
+                <th className="px-3 sm:px-6 py-4 font-semibold">Pipeline Flow</th>
+                <th className="px-3 sm:px-6 py-4 font-semibold">Status</th>
+                <th className="px-3 sm:px-6 py-4 font-semibold text-right">Documents</th>
+                <th className="px-3 sm:px-6 py-4 font-semibold text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {isLoading && jobs.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-8">
+                  <td colSpan={5} className="text-center py-8">
                     <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
                   </td>
                 </tr>
               ) : filteredJobs.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-8 text-sm text-muted italic">
+                  <td colSpan={5} className="text-center py-8 text-sm text-muted italic">
                     No jobs found matching criteria.
                   </td>
                 </tr>
@@ -529,27 +568,31 @@ export default function JobTable({ setActiveView }: JobTableProps) {
                 filteredJobs.map((job) => (
                   <tr key={job.id} className="hover:bg-slate-800/30 transition-colors group">
                     {/* Job Details */}
-                    <td className="px-6 py-4">
+                    <td className="px-3 sm:px-6 py-4">
                       <div className="font-semibold text-foreground text-sm">{job.name}</div>
                       <div className="text-[10px] text-indigo-400 font-bold tracking-wide mt-1.5 flex items-center gap-1 font-mono uppercase bg-indigo-500/10 border border-indigo-500/20 px-2 py-0.5 rounded w-max" title="Transformation Connector">
                         <Cpu className="w-3 h-3 text-indigo-400" />
-                        <span className="text-xs font-mono bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-indigo-400 truncate max-w-[180px] inline-block" title={job.transformationConnector || 'Ollama_Embedding_Default'}>
-                        {job.transformationConnector || 'Ollama_Embedding_Default'}
-                      </span>
+                        <span className="text-[10px] sm:text-xs font-mono bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-indigo-400 truncate max-w-[120px] sm:max-w-[180px] inline-block" title={job.transformationConnector || 'Ollama_Embedding_Default'}>
+                          {job.transformationConnector || 'Ollama_Embedding_Default'}
+                        </span>
                       </div>
-                      <div className="text-xs text-muted-foreground mt-0.5 font-mono">ID: {job.id}</div>
+                      <div className="text-[10px] text-muted-foreground mt-1.5 font-mono">ID: {job.id}</div>
+                      <div className="flex items-center gap-1 text-[10px] text-muted-foreground mt-1 font-mono">
+                        <FolderOpen className="w-3 h-3 text-cyan-500/60 flex-shrink-0" />
+                        <span className="truncate max-w-[140px] sm:max-w-[220px]" title={job.path}>{job.path}</span>
+                      </div>
                     </td>
                     
                     {/* Pipeline Flow */}
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-1.5 flex-wrap">
+                    <td className="px-3 sm:px-6 py-4">
+                      <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
                         {(() => {
                           const repoInfo = getRepositoryIcon(job.repositoryConnector);
                           const RepoIcon = repoInfo.icon;
                           return (
-                            <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded border ${repoInfo.bg} ${repoInfo.color} ${repoInfo.border}`} title="Repository Source">
+                            <span className={`inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded border ${repoInfo.bg} ${repoInfo.color} ${repoInfo.border}`} title="Repository Source">
                               <RepoIcon className="w-3 h-3 flex-shrink-0" />
-                              <span className="truncate max-w-[120px] inline-block" title={job.repositoryConnector || 'N/A'}>
+                              <span className="truncate max-w-[90px] sm:max-w-[120px] inline-block" title={job.repositoryConnector || 'N/A'}>
                                 {job.repositoryConnector || 'N/A'}
                               </span>
                             </span>
@@ -558,25 +601,25 @@ export default function JobTable({ setActiveView }: JobTableProps) {
                         
                         {job.authorityConnector && (
                           <>
-                            <ArrowRight className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-purple-500/10 text-purple-400 px-2 py-0.5 rounded border border-purple-500/20" title="Security Authority">
+                            <ArrowRight className="w-2.5 h-2.5 text-muted-foreground flex-shrink-0" />
+                            <span className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-semibold bg-purple-500/10 text-purple-400 px-2 py-0.5 rounded border border-purple-500/20" title="Security Authority">
                               <ShieldCheck className="w-3 h-3 flex-shrink-0" />
-                              <span className="truncate max-w-[120px] inline-block" title={job.authorityConnector}>
+                              <span className="truncate max-w-[90px] sm:max-w-[120px] inline-block" title={job.authorityConnector}>
                                 {job.authorityConnector}
                               </span>
                             </span>
                           </>
                         )}
                         
-                        <ArrowRight className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                        <ArrowRight className="w-2.5 h-2.5 text-muted-foreground flex-shrink-0" />
                         
                         {(() => {
                           const outInfo = getOutputIcon(job.outputConnector);
                           const OutIcon = outInfo.icon;
                           return (
-                            <span className={`inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded border ${outInfo.bg} ${outInfo.color} ${outInfo.border}`} title="Vector Output">
+                            <span className={`inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-semibold px-2 py-0.5 rounded border ${outInfo.bg} ${outInfo.color} ${outInfo.border}`} title="Vector Output">
                               <OutIcon className="w-3 h-3 flex-shrink-0" />
-                              <span className="truncate max-w-[120px] inline-block" title={job.outputConnector || 'N/A'}>
+                              <span className="truncate max-w-[90px] sm:max-w-[120px] inline-block" title={job.outputConnector || 'N/A'}>
                                 {job.outputConnector || 'N/A'}
                               </span>
                             </span>
@@ -585,19 +628,11 @@ export default function JobTable({ setActiveView }: JobTableProps) {
                       </div>
                     </td>
                     
-                    {/* Scan Path */}
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                        <FolderOpen className="w-4 h-4 text-cyan-500/60 flex-shrink-0" />
-                        <span className="truncate max-w-[180px] font-mono text-xs" title={job.path}>{job.path}</span>
-                      </div>
-                    </td>
-                    
                     {/* Status & Ingestion Pipeline Stage */}
-                    <td className="px-6 py-4">
-                      <div className="flex flex-col gap-1.5 min-w-[140px]">
+                    <td className="px-3 sm:px-6 py-4">
+                      <div className="flex flex-col gap-1.5 min-w-[110px] sm:min-w-[140px]">
                         <div className="flex items-center gap-1.5">
-                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${statusStyles[job.status]}`}>
+                          <span className={`px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-semibold border ${statusStyles[job.status]}`}>
                             {job.status}
                           </span>
                           {job.status === 'Running' && (
@@ -606,8 +641,8 @@ export default function JobTable({ setActiveView }: JobTableProps) {
                         </div>
                         {job.status === 'Running' && job.currentStage && (
                           <div className="space-y-1 pr-4 animate-in fade-in duration-300">
-                            <div className="text-[10px] text-cyan-400 font-semibold tracking-wide flex justify-between gap-2">
-                              <span className="capitalize truncate max-w-[85px]">{job.currentStage}...</span>
+                            <div className="text-[9px] sm:text-[10px] text-cyan-400 font-semibold tracking-wide flex justify-between gap-2">
+                              <span className="capitalize truncate max-w-[65px] sm:max-w-[85px]">{job.currentStage}...</span>
                               <span>{getStageProgress(job.currentStage)}%</span>
                             </div>
                             <div className="w-full bg-slate-800 rounded-full h-1 overflow-hidden">
@@ -618,30 +653,19 @@ export default function JobTable({ setActiveView }: JobTableProps) {
                             </div>
                           </div>
                         )}
-                        {job.status === 'Finished' && (
-                          <span className="text-[10px] text-green-400/80 font-medium font-mono pl-1">Completed</span>
-                        )}
-                        {job.status === 'Paused' && (
-                          <span className="text-[10px] text-yellow-400/80 font-medium font-mono pl-1">Paused</span>
-                        )}
-                        {job.status === 'Error' && (
-                          <span className="text-[10px] text-red-400/80 font-medium font-mono pl-1">Failed</span>
-                        )}
+                        <span className="text-[9px] sm:text-[10px] text-muted-foreground font-mono mt-0.5 leading-none">
+                          Run: {job.lastRun}
+                        </span>
                       </div>
                     </td>
                     
                     {/* Documents */}
-                    <td className="px-6 py-4 text-sm text-right font-mono text-foreground font-semibold">
+                    <td className="px-3 sm:px-6 py-4 text-xs sm:text-sm text-right font-mono text-foreground font-semibold">
                       {job.documents.toLocaleString()}
                     </td>
                     
-                    {/* Last Run */}
-                    <td className="px-6 py-4 text-sm text-muted-foreground">
-                      {job.lastRun}
-                    </td>
-                    
                     {/* Actions */}
-                    <td className="px-6 py-4">
+                    <td className="px-3 sm:px-6 py-4">
                       <div className="flex items-center justify-center gap-1">
                         <button 
                           onClick={() => triggerAction(job.id, 'start')}
@@ -669,16 +693,15 @@ export default function JobTable({ setActiveView }: JobTableProps) {
                         </button>
                         
                         <div className="h-4 w-px bg-border mx-1" />
-
+ 
                         <button 
                           onClick={() => handleDiagnoseJob(job)}
-                          className="px-2 py-1 rounded bg-gradient-to-r from-purple-500/20 to-cyan-500/20 hover:from-purple-500/30 hover:to-cyan-500/30 text-purple-300 border border-purple-500/30 flex items-center gap-1 text-xs font-medium transition-all shadow-sm shadow-purple-500/10"
+                          className="p-1.5 rounded bg-purple-500/10 hover:bg-purple-500/25 text-purple-300 border border-purple-500/20 transition-colors flex items-center justify-center"
                           title="Diagnose with AI (AIOps Root Cause Analysis)"
                         >
-                          <Sparkles className="w-3.5 h-3.5 text-purple-400 animate-pulse" />
-                          <span className="hidden xl:inline">Diagnose</span>
+                          <Sparkles className="w-4 h-4 text-purple-400 animate-pulse" />
                         </button>
-
+ 
                         <button 
                           onClick={() => openEditForm(job)}
                           className="p-1.5 rounded hover:bg-slate-700 hover:text-foreground transition-colors"
@@ -979,6 +1002,45 @@ export default function JobTable({ setActiveView }: JobTableProps) {
               </button>
             </div>
 
+            {/* Tabs Navigation */}
+            {!isDiagnosing && diagnoseReport && (
+              <div className="flex border-b border-border bg-slate-900/60 px-6 gap-2">
+                <button
+                  onClick={() => setActiveTab('ai')}
+                  className={`flex items-center gap-2 py-3 px-4 border-b-2 text-xs font-semibold uppercase tracking-wider transition-all duration-200 ${
+                    activeTab === 'ai'
+                      ? 'border-purple-500 text-purple-300'
+                      : 'border-transparent text-muted hover:text-foreground'
+                  }`}
+                >
+                  <Sparkles className="w-4 h-4" />
+                  AI Diagnostics (RCA)
+                </button>
+                <button
+                  onClick={() => setActiveTab('traces')}
+                  className={`flex items-center gap-2 py-3 px-4 border-b-2 text-xs font-semibold uppercase tracking-wider transition-all duration-200 ${
+                    activeTab === 'traces'
+                      ? 'border-cyan-500 text-cyan-300'
+                      : 'border-transparent text-muted hover:text-foreground'
+                  }`}
+                >
+                  <Network className="w-4 h-4" />
+                  OTel Trace Timeline
+                </button>
+                <button
+                  onClick={() => setActiveTab('errors')}
+                  className={`flex items-center gap-2 py-3 px-4 border-b-2 text-xs font-semibold uppercase tracking-wider transition-all duration-200 ${
+                    activeTab === 'errors'
+                      ? 'border-red-500 text-red-300'
+                      : 'border-transparent text-muted hover:text-foreground'
+                  }`}
+                >
+                  <AlertCircle className="w-4 h-4" />
+                  Error Logs ({errorData.length})
+                </button>
+              </div>
+            )}
+
             {/* Content Body */}
             <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-950/40">
               {isDiagnosing ? (
@@ -994,102 +1056,250 @@ export default function JobTable({ setActiveView }: JobTableProps) {
                 </div>
               ) : diagnoseReport ? (
                 <>
-                  {/* Status Banner */}
-                  <div className={`p-4 rounded-xl border flex items-start gap-3 ${
-                    diagnoseReport.status === 'FAILED'
-                      ? 'bg-red-500/10 border-red-500/30 text-red-300'
-                      : diagnoseReport.status === 'WARNING'
-                      ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
-                      : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
-                  }`}>
-                    {diagnoseReport.status === 'FAILED' ? (
-                      <XCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                    ) : diagnoseReport.status === 'WARNING' ? (
-                      <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
-                    ) : (
-                      <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
-                    )}
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-sm uppercase tracking-wider">{diagnoseReport.jobName}</span>
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded border border-current opacity-80 uppercase">
-                          {diagnoseReport.status}
-                        </span>
+                  {activeTab === 'ai' && (
+                    <div className="space-y-6 animate-in fade-in duration-200">
+                      {/* Status Banner */}
+                      <div className={`p-4 rounded-xl border flex items-start gap-3 ${
+                        diagnoseReport.status === 'FAILED'
+                          ? 'bg-red-500/10 border-red-500/30 text-red-300'
+                          : diagnoseReport.status === 'WARNING'
+                          ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                          : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                      }`}>
+                        {diagnoseReport.status === 'FAILED' ? (
+                          <XCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                        ) : diagnoseReport.status === 'WARNING' ? (
+                          <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+                        ) : (
+                          <CheckCircle2 className="w-5 h-5 text-emerald-400 flex-shrink-0 mt-0.5" />
+                        )}
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-sm uppercase tracking-wider">{diagnoseReport.jobName}</span>
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded border border-current opacity-80 uppercase">
+                              {diagnoseReport.status}
+                            </span>
+                          </div>
+                          <p className="text-xs mt-1 text-muted-foreground">{diagnoseReport.summary}</p>
+                        </div>
                       </div>
-                      <p className="text-xs mt-1 text-muted-foreground">{diagnoseReport.summary}</p>
-                    </div>
-                  </div>
 
-                  {/* Root Cause Analysis (RCA) Box */}
-                  <div className="space-y-2">
-                    <h3 className="text-xs font-semibold text-purple-300 uppercase tracking-wider flex items-center gap-1.5">
-                      <Stethoscope className="w-4 h-4 text-purple-400" />
-                      AI Root Cause Analysis (RCA)
-                    </h3>
-                    <div className="p-4 rounded-xl bg-purple-950/20 border border-purple-500/20 text-sm text-slate-200 leading-relaxed font-sans shadow-inner">
-                      {diagnoseReport.rootCauseAnalysis}
-                    </div>
-                  </div>
+                      {/* Root Cause Analysis (RCA) Box */}
+                      <div className="space-y-2">
+                        <h3 className="text-xs font-semibold text-purple-300 uppercase tracking-wider flex items-center gap-1.5">
+                          <Stethoscope className="w-4 h-4 text-purple-400" />
+                          AI Root Cause Analysis (RCA)
+                        </h3>
+                        <div className="p-4 rounded-xl bg-purple-950/20 border border-purple-500/20 text-sm text-slate-200 leading-relaxed font-sans shadow-inner">
+                          {diagnoseReport.rootCauseAnalysis}
+                        </div>
+                      </div>
 
-                  {/* OTel Stage Timing Breakdown */}
-                  {diagnoseReport.stageTimingMillis && (
-                    <div className="space-y-3">
-                      <h3 className="text-xs font-semibold text-cyan-300 uppercase tracking-wider flex items-center gap-1.5">
-                        <BarChart2 className="w-4 h-4 text-cyan-400" />
-                        Pipeline Stage Latency Breakdown (OpenTelemetry Spans)
-                      </h3>
-                      <div className="p-4 rounded-xl bg-slate-900/60 border border-border space-y-3">
-                        {Object.entries(diagnoseReport.stageTimingMillis).map(([stage, duration]) => (
-                          <div key={stage} className="space-y-1">
-                            <div className="flex justify-between text-xs font-mono">
-                              <span className="text-muted-foreground">{stage}</span>
-                              <span className="text-cyan-400 font-semibold">{String(duration)} ms</span>
+                      {/* OTel Stage Timing Breakdown */}
+                      {diagnoseReport.stageTimingMillis && (
+                        <div className="space-y-3">
+                          <h3 className="text-xs font-semibold text-cyan-300 uppercase tracking-wider flex items-center gap-1.5">
+                            <BarChart2 className="w-4 h-4 text-cyan-400" />
+                            Pipeline Stage Latency Breakdown (OpenTelemetry Spans)
+                          </h3>
+                          <div className="p-4 rounded-xl bg-slate-900/60 border border-border space-y-3">
+                            {Object.entries(diagnoseReport.stageTimingMillis).map(([stage, duration]) => (
+                              <div key={stage} className="space-y-1">
+                                <div className="flex justify-between text-xs font-mono">
+                                  <span className="text-muted-foreground">{stage}</span>
+                                  <span className="text-cyan-400 font-semibold">{String(duration)} ms</span>
+                                </div>
+                                <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                                  <div 
+                                    className="bg-gradient-to-r from-cyan-500 to-purple-500 h-full rounded-full"
+                                    style={{ width: `${Math.min(100, Math.max(10, (Number(duration) / 2000) * 100))}%` }}
+                                  />
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Bottlenecks & Insights */}
+                      {diagnoseReport.bottleneckInsights && diagnoseReport.bottleneckInsights.length > 0 && (
+                        <div className="space-y-2">
+                          <h3 className="text-xs font-semibold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
+                            <Activity className="w-4 h-4 text-amber-400" />
+                            Identified Bottlenecks & Anomalies
+                          </h3>
+                          <ul className="space-y-1.5">
+                            {diagnoseReport.bottleneckInsights.map((insight: string, idx: number) => (
+                              <li key={idx} className="text-xs text-slate-300 flex items-start gap-2 bg-amber-500/5 p-2.5 rounded-lg border border-amber-500/10">
+                                <span className="text-amber-400 font-bold">•</span>
+                                <span>{insight}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* Recommended Actions */}
+                      {diagnoseReport.recommendedActions && diagnoseReport.recommendedActions.length > 0 && (
+                        <div className="space-y-2">
+                          <h3 className="text-xs font-semibold text-emerald-300 uppercase tracking-wider flex items-center gap-1.5">
+                            <Wrench className="w-4 h-4 text-emerald-400" />
+                            Recommended Resolution Actions
+                          </h3>
+                          <ul className="space-y-1.5">
+                            {diagnoseReport.recommendedActions.map((action: string, idx: number) => (
+                              <li key={idx} className="text-xs text-slate-300 flex items-start gap-2 bg-emerald-500/5 p-2.5 rounded-lg border border-emerald-500/10">
+                                <span className="text-emerald-400 font-bold">✓</span>
+                                <span>{action}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {activeTab === 'traces' && (
+                    <div className="space-y-4 animate-in fade-in duration-200">
+                      {traceData ? (
+                        <>
+                          <div className="grid grid-cols-3 gap-4 bg-slate-900/40 p-4 rounded-xl border border-border">
+                            <div>
+                              <span className="text-[10px] text-muted-foreground uppercase font-semibold">Trace ID</span>
+                              <p className="text-xs font-mono text-cyan-400 mt-0.5">{traceData.spans?.[0]?.traceId || 'N/A'}</p>
                             </div>
-                            <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
-                              <div 
-                                className="bg-gradient-to-r from-cyan-500 to-purple-500 h-full rounded-full"
-                                style={{ width: `${Math.min(100, Math.max(10, (Number(duration) / 2000) * 100))}%` }}
-                              />
+                            <div>
+                              <span className="text-[10px] text-muted-foreground uppercase font-semibold">Total Spans</span>
+                              <p className="text-sm font-semibold mt-0.5">{traceData.totalSpans || traceData.spans?.length || 0}</p>
+                            </div>
+                            <div>
+                              <span className="text-[10px] text-muted-foreground uppercase font-semibold">Total Duration</span>
+                              <p className="text-sm font-semibold text-cyan-400 mt-0.5">{traceData.totalDurationMillis} ms</p>
                             </div>
                           </div>
-                        ))}
-                      </div>
+                          
+                          <div className="space-y-3">
+                            <h3 className="text-xs font-semibold text-cyan-300 uppercase tracking-wider flex items-center gap-1.5">
+                              Span Execution Tree (Click for Details)
+                            </h3>
+                            <div className="space-y-2.5">
+                              {traceData.spans?.map((span: any, idx: number) => {
+                                const isSpanFailed = span.status === 'ERROR';
+                                const isUnexecuted = span.status === 'UNEXECUTED';
+                                const isCurrentSelected = selectedSpan?.spanId === span.spanId;
+                                return (
+                                  <div 
+                                    key={span.spanId || idx}
+                                    onClick={() => setSelectedSpan(isCurrentSelected ? null : span)}
+                                    className={`p-3.5 rounded-xl border transition-all duration-200 cursor-pointer ${
+                                      isCurrentSelected
+                                        ? 'bg-slate-900 border-cyan-500/40 shadow-md shadow-cyan-500/5'
+                                        : 'bg-slate-950/60 border-border hover:border-slate-800'
+                                    }`}
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex items-center gap-2.5">
+                                        <div className={`w-2.5 h-2.5 rounded-full ${
+                                          isSpanFailed ? 'bg-red-500 animate-pulse' : (isUnexecuted ? 'bg-slate-700' : 'bg-green-500')
+                                        }`} />
+                                        <div>
+                                          <span className="text-xs font-bold text-slate-200">{span.stage}</span>
+                                          <span className="text-[10px] text-muted-foreground font-mono ml-2">({span.component})</span>
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-xs font-mono text-cyan-400 font-semibold">{span.durationMillis} ms</span>
+                                        <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${
+                                          isSpanFailed
+                                            ? 'bg-red-500/10 border-red-500/20 text-red-400'
+                                            : isUnexecuted
+                                            ? 'bg-slate-800 border-slate-700 text-slate-400'
+                                            : 'bg-green-500/10 border-green-500/20 text-green-400'
+                                        }`}>
+                                          {span.status}
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    {/* Timeline bar representation */}
+                                    <div className="mt-2.5 w-full bg-slate-900/60 rounded-full h-1 overflow-hidden">
+                                      <div 
+                                        className={`h-full rounded-full ${
+                                          isSpanFailed ? 'bg-red-500' : (isUnexecuted ? 'bg-slate-700' : 'bg-cyan-500')
+                                        }`}
+                                        style={{ 
+                                          width: `${Math.min(100, Math.max(8, (span.durationMillis / (traceData.totalDurationMillis || 1)) * 100))}%`
+                                        }}
+                                      />
+                                    </div>
+
+                                    {/* Expandable attributes drawer */}
+                                    {isCurrentSelected && (
+                                      <div className="mt-4 p-3 bg-slate-950 rounded-lg border border-slate-800 text-[11px] font-mono text-slate-400 space-y-2 animate-in slide-in-from-top-1 duration-150">
+                                        <p className="text-cyan-300 font-bold border-b border-slate-800 pb-1">Span Attributes</p>
+                                        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                                          <div><span className="text-muted-foreground">Span ID:</span> {span.spanId}</div>
+                                          <div><span className="text-muted-foreground">Trace ID:</span> {span.traceId}</div>
+                                          {span.errorMessage && (
+                                            <div className="col-span-2 text-red-400 mt-1">
+                                              <span className="font-bold">Error:</span> {span.errorMessage}
+                                            </div>
+                                          )}
+                                          {span.attributes && Object.entries(span.attributes).map(([k, v]: any) => (
+                                            <div key={k} className="col-span-2">
+                                              <span className="text-muted-foreground">{k}:</span> {String(v)}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="py-12 text-center bg-slate-900/20 rounded-xl border border-border">
+                          <Loader2 className="w-8 h-8 animate-spin mx-auto text-cyan-500/80 mb-2" />
+                          <h4 className="text-sm font-semibold text-slate-200">Loading Trace Tree...</h4>
+                          <p className="text-xs text-muted-foreground mt-1">Acquiring span events from local trace store.</p>
+                        </div>
+                      )}
                     </div>
                   )}
 
-                  {/* Bottlenecks & Insights */}
-                  {diagnoseReport.bottleneckInsights && diagnoseReport.bottleneckInsights.length > 0 && (
-                    <div className="space-y-2">
-                      <h3 className="text-xs font-semibold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
-                        <Activity className="w-4 h-4 text-amber-400" />
-                        Identified Bottlenecks & Anomalies
-                      </h3>
-                      <ul className="space-y-1.5">
-                        {diagnoseReport.bottleneckInsights.map((insight: string, idx: number) => (
-                          <li key={idx} className="text-xs text-slate-300 flex items-start gap-2 bg-amber-500/5 p-2.5 rounded-lg border border-amber-500/10">
-                            <span className="text-amber-400 font-bold">•</span>
-                            <span>{insight}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {/* Recommended Actions */}
-                  {diagnoseReport.recommendedActions && diagnoseReport.recommendedActions.length > 0 && (
-                    <div className="space-y-2">
-                      <h3 className="text-xs font-semibold text-emerald-300 uppercase tracking-wider flex items-center gap-1.5">
-                        <Wrench className="w-4 h-4 text-emerald-400" />
-                        Recommended Resolution Actions
-                      </h3>
-                      <ul className="space-y-1.5">
-                        {diagnoseReport.recommendedActions.map((action: string, idx: number) => (
-                          <li key={idx} className="text-xs text-slate-300 flex items-start gap-2 bg-emerald-500/5 p-2.5 rounded-lg border border-emerald-500/10">
-                            <span className="text-emerald-400 font-bold">✓</span>
-                            <span>{action}</span>
-                          </li>
-                        ))}
-                      </ul>
+                  {activeTab === 'errors' && (
+                    <div className="space-y-4 animate-in fade-in duration-200">
+                      {errorData.length === 0 ? (
+                        <div className="py-12 text-center bg-slate-900/20 rounded-xl border border-border">
+                          <CheckCircle2 className="w-10 h-10 text-green-500/80 mx-auto mb-2" />
+                          <h4 className="text-sm font-semibold text-slate-200">No Failures Logged</h4>
+                          <p className="text-xs text-muted-foreground mt-1">This pipeline execution completed without registering any exception traces or OTel error spans.</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {errorData.map((err: any, idx: number) => (
+                            <div key={idx} className="p-4 rounded-xl border border-red-500/20 bg-red-950/5 space-y-3">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2 text-red-400">
+                                  <AlertTriangle className="w-4 h-4" />
+                                  <span className="text-xs font-bold font-mono">[{err.level}] {err.component}</span>
+                                </div>
+                                <span className="text-[10px] text-muted-foreground font-mono">
+                                  {new Date(err.timestamp).toLocaleTimeString()}
+                                </span>
+                              </div>
+                              <p className="text-sm text-slate-200 font-semibold">{err.message}</p>
+                              {err.stackTrace && (
+                                <pre className="p-3 bg-slate-950 rounded-lg text-xs font-mono text-red-300/80 overflow-x-auto border border-red-500/10 max-h-[160px] overflow-y-auto leading-relaxed">
+                                  {err.stackTrace}
+                                </pre>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </>

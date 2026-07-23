@@ -144,6 +144,11 @@ OpenCrawling incorporates **AI-Powered Observability (AIOps)** to automatically 
 ### Key Capabilities
 - **Instant Root Cause Analysis (RCA)**: Click **"Diagnose with AI"** next to any pipeline job in `oc-admin-ui` to analyze OTel spans, identify exact failure points (e.g. database insertion timeouts, network latency), and receive actionable fix recommendations.
 - **Correlated OpenTelemetry Spans**: All major pipeline stages (`Scanning`, `Extracting`, `Chunking`, `Embedding`, `Indexing`) record correlated OTel spans with timing breakdowns.
+- **OTel Trace Timeline Visualizer**: Inspect trace spans and child concurrent virtual thread spans in real-time, detailing component names, latency bars, statuses, and custom span parameters.
+- **Error & Exception Log Analyzer**: Directly parses and displays full exception stack traces inside the UI, making troubleshooting immediate.
+- **Toggleable Telemetry**: Toggle observability dynamically using environment flags:
+  - `OPENCRAWLING_OBSERVABILITY_ENABLED` (`true`/`false`) to toggle tracing.
+  - `OPENCRAWLING_OBSERVABILITY_SAMPLING_PROBABILITY` (`0.0` to `1.0`) to configure sampling rates.
 - **System MCP Tools**: Admin Copilot exposes native Model Context Protocol (MCP) tools for LLM diagnostic queries:
   - `fetch_job_traces(jobId)`: Retrieves correlated OTel spans and timing breakdowns per pipeline stage.
   - `get_error_logs(jobId, timeframe)`: Fetches failure logs and exception stack traces.
@@ -300,6 +305,12 @@ We provide fully automated end-to-end integration test scripts that build, boot,
     ./scripts/test-ozone-decoupled.sh
     ```
     This script tests the decoupled architecture using Apache Ozone 2.2.0 (SCM, OM, Datanode, S3 Gateway) as the Claim Check Object Store for large document payloads.
+
+*   **OpenTelemetry & Observability Pipeline**:
+    ```bash
+    ./scripts/test-observability.sh
+    ```
+    This script tests the telemetry ingestion pipeline, spinning up Jaeger, the OTel Collector, and Prometheus, executing a JUnit-based trace emitter, and verifying trace propagation using Jaeger's query API.
 
 ---
 

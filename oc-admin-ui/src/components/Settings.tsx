@@ -206,20 +206,20 @@ export default function Settings() {
                     <Globe className="w-4 h-4 text-muted" />
                     Ollama Host URL
                   </label>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <input 
                       type="url"
                       value={settings.ollamaBaseUrl}
                       onChange={(e) => setSettings({ ...settings, ollamaBaseUrl: e.target.value })}
                       placeholder="http://127.0.0.1:11434"
-                      className="flex-1 bg-background border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground font-mono"
+                      className="flex-1 bg-background border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground font-mono min-w-0"
                       required
                     />
                     <button
                       type="button"
                       onClick={handleTestConnection}
                       disabled={testingConnection}
-                      className="btn-secondary flex items-center gap-1.5 px-3 whitespace-nowrap text-sm"
+                      className="btn-secondary flex items-center justify-center gap-1.5 px-3 py-2 text-sm w-full sm:w-auto"
                     >
                       {testingConnection ? (
                         <Loader2 className="w-4 h-4 animate-spin text-primary" />
@@ -251,11 +251,11 @@ export default function Settings() {
                     <Database className="w-4 h-4 text-muted" />
                     Embedding Model
                   </label>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <select
                       value={settings.ollamaModel}
                       onChange={(e) => handleModelChange(e.target.value)}
-                      className="bg-background border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground"
+                      className="bg-background border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground w-full"
                     >
                       <option value="mxbai-embed-large">mxbai-embed-large (Default)</option>
                       <option value="nomic-embed-text">nomic-embed-text</option>
@@ -267,7 +267,7 @@ export default function Settings() {
                       value={settings.ollamaModel}
                       onChange={(e) => setSettings({ ...settings, ollamaModel: e.target.value })}
                       placeholder="Custom model name..."
-                      className="bg-background border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground"
+                      className="bg-background border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground w-full"
                       title="Or type in a custom local Ollama model name"
                     />
                   </div>

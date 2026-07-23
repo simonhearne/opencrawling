@@ -42,6 +42,11 @@
             <groupId>org.opencrawling</groupId>
             <artifactId>oc-core</artifactId>
             <version>${project.version}</version>
+         </dependency>
+        <dependency>
+            <groupId>org.opencrawling</groupId>
+            <artifactId>oc-observability</artifactId>
+            <version>${project.version}</version>
         </dependency>
 
         <!-- Apache Iceberg Core and API -->
